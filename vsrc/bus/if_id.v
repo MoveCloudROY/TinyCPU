@@ -25,7 +25,7 @@ module if_id(
     always @(posedge clk_i) begin
         if (rst_i) begin
             if2id_bus_ro <= {32'd0, 32'd0, 32'd0};
-
+            if_id_pcnow <= 32'd0;
         end else begin
             if_id_pcnow <= if_pc_i;
             // 向 ID 传递 PC INST

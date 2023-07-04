@@ -393,7 +393,7 @@ module id(
                     inst_imm_zero? {20'd0, _2ri12_i12} :
                     inst_imm_sign12? {{20{_2ri12_i12[11]}}, _2ri12_i12} :
                     inst_imm_sign20? {_1rsi20_si20, 12'b0} : rk_data_i; // 对于 LU12i 之后直接取 rk 作为输出， 
-                                                                        // 对于 PCADDU12I 则需 将 rj + rk 作为输出
+                                                                        // 对于 PCADDU12I 则需 将 rj(pc) + rk 作为输出
 
     // MEM 需要的数据
     wire ld_bh_sign;        // load一字节为有符号load

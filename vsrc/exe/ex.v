@@ -95,8 +95,8 @@ module ex(
         id_mem_ctl, id_mem_st_data, // load/store信息和store数据
         exe_result,                 // exe运算结果
         // WB 需要的信号
-        id_wb_rd_addr,              // 写回的寄存器写使能
-        id_wb_rd_we,                // 写回的目的寄存器
+        id_wb_rd_addr,              // 写回的目的寄存器
+        id_wb_rd_we,                // 写回的寄存器写使能
         pc};                        // PC
 
 

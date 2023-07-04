@@ -87,7 +87,6 @@ module mem(
     assign load_result =    (ld_st_size == 3'd4 ) ? {{24{ld_bh_sign & load_sign}}, dm_rdata_i[7:0]}  :
                             (ld_st_size == 3'd2 ) ? {{16{ld_bh_sign & load_sign}}, dm_rdata_i[15:0]} :
                             dm_rdata_i[31:0];
-//-----{load/store访存}end
 
 //-----{MEM执行完成}begin
     //由于数据RAM为同步读写的,

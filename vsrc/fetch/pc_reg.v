@@ -3,7 +3,6 @@
 module pc_reg(
     input clk_i,
     input rst_i,
-    input stall_i,
     input [32:0] jbr_bus_i,   // 跳转总线
     output [`RegW-1:0] if_pc_o
 );
@@ -27,7 +26,7 @@ module pc_reg(
     always @(posedge clk_i) begin
         if(rst_i) begin
             pc <= `LOONG_PC_START_ADDR;
-        end else if (!stall_i) begin
+        end else begin
             pc <= next_pc;
         end
     end

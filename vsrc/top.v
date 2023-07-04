@@ -104,7 +104,6 @@ module top (
     pc_reg U_pc_reg(
         .clk_i(clk_i),
         .rst_i(rst_i),
-        .stall_i(0),
         .jbr_bus_i(jbr_bus_c),
         .if_pc_o(if_pc_c)
     );
