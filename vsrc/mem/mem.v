@@ -1,15 +1,19 @@
 `include "common.vh"
 module mem(
-    // input              clk,                      // 时钟
-    input      [`EX2MEMBusSize - 1:0] ex2mem_bus_ri,// EXE->MEM总线
-    input      [ 31:0] dm_rdata_i,                    // 访存读数据
-    output     [ 31:0] dm_addr_o,                     // 访存读写地址
-    output reg [  3:0] dm_wbe_n_o,                     // 访存写使能
-    output reg [ 31:0] dm_wdata_o,                    // 访存写数据
-    output     dm_rw_o,                                // 选择读(1)写(0) 
-
+    // input              clk,                          // 时钟
     
-    output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o  // MEM->WB总线
+    input      [ 31:0] dm_rdata_i,                      // 访存读数据
+    output     [ 31:0] dm_addr_o,                       // 访存读写地址
+    output reg [  3:0] dm_wbe_n_o,                      // 访存写使能
+    output reg [ 31:0] dm_wdata_o,                      // 访存写数据
+    output     dm_rw_o,                                 // 选择读(1)写(0) 
+
+    input      [`EX2MEMBusSize - 1:0] ex2mem_bus_ri,    // EXE->MEM总线
+    output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o,     // MEM->WB总线
+
+    input                       ctl_mem_valid_i,
+    output                      ctl_mem_over_o,
+    output [`RegAddrBusW-1:0]   ctl_mem_dest_o
 );
     /*==================================================*/
     //                 级间寄存器信号解析
@@ -55,9 +59,9 @@ module mem(
     assign dm_addr_o = exe_result;
     
     // store操作的写使能
-    always @ (*)    // 内存写使能信号
+    always @ (*)
     begin
-        if (/*MEM_valid &&*/ inst_store) // 访存级有效时,且为store操作
+        if (ctl_mem_valid_i && inst_store) // 访存级有效时,才可以进行 store 操作
         begin
             case (ld_st_size)
                 3'b100  : dm_wbe_n_o = 4'b1110;
@@ -88,33 +92,6 @@ module mem(
                             (ld_st_size == 3'd2 ) ? {{16{ld_bh_sign & load_sign}}, dm_rdata_i[15:0]} :
                             dm_rdata_i[31:0];
 
-//-----{MEM执行完成}begin
-    //由于数据RAM为同步读写的,
-    //故对load指令，取数据时，有一拍延时
-    //即发地址的下一拍时钟才能得到load的数据
-    //故mem在进行load操作时有需要两拍时间才能取到数据
-    //而对其他操作，则只需要一拍时间
-    // reg MEM_valid_r;
-    // always @(posedge clk)
-    // begin
-    //     if (MEM_allow_in)
-    //     begin
-    //         MEM_valid_r <= 1'b0;
-    //     end
-    //     else
-    //     begin
-    //         MEM_valid_r <= MEM_valid;
-    //     end
-    // end
-    // assign MEM_over = inst_load ? MEM_valid_r : MEM_valid;
-    //如果数据ram为异步读的，则MEM_valid即是MEM_over信号，
-    //即load一拍完成
-//-----{MEM执行完成}end
-
-//-----{MEM模块的dest值}begin
-   //只有在MEM模块有效时，其写回目的寄存器号才有意义
-    // assign MEM_wdest = rf_wdest & {5{MEM_valid}};
-//-----{MEM模块的dest值}end
 
     /*==================================================*/
     //              下级所需数据/总线生成
@@ -127,6 +104,13 @@ module mem(
         mem_result,         // 最终要写回寄存器的数据
         pc                  // PC值
     };                               
+
+    /*==================================================*/
+    //                控制信号与冒险处理
+    /*==================================================*/
+    assign ctl_mem_dest_o = rf_wdest & {5{ctl_mem_valid_i}};
+
+    assign ctl_mem_over_o = ctl_mem_valid_i;
 
 endmodule
 

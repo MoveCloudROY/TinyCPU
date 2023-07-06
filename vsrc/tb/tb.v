@@ -40,8 +40,8 @@ module tb (
 `ifdef VERILATOR
     async_ram U_sram_1(
         .clk(clk_i),
-        .en(~w_ram_we_n && w_ram_oe_n), 
-        .wen(~w_ram_be_n[1:0]),
+        .we_n(w_ram_we_n && !w_ram_oe_n), 
+        .web_n(w_ram_be_n[1:0]),
         .addr(w_ram_addr),
         .wdata(w_ram_data[15:0]),
         .rdata(w_ram_data[15:0])
@@ -49,8 +49,8 @@ module tb (
 
     async_ram U_sram_2(
         .clk(clk_i),
-        .en(!w_ram_we_n && w_ram_oe_n), 
-        .wen(~w_ram_be_n[3:2]),
+        .we_n(w_ram_we_n && !w_ram_oe_n), 
+        .web_n(w_ram_be_n[3:2]),
         .addr(w_ram_addr),
         .wdata(w_ram_data[31:16]),
         .rdata(w_ram_data[31:16])

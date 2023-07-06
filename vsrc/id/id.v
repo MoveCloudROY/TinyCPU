@@ -14,26 +14,21 @@ module id(
     // return to IF for jump
     output [32:0] jbr_bus_o,
 
-    // // to EXE bus
-    // output [11:0]  id_aluop,
-    // // output [2:0]  id_alusel_o,
-    // output [`RegW-1:0] id_rj,
-    // output [`RegW-1:0] id_rk,
-
-    // // to MEM bus
-    // output [5:0] id_mem_ctl,
-    // // to WB bus
-    // output [`RegAddrBusW-1:0] id_wb_rd_addr,
-    // output wire id_wb_rd_we,
-
+    // 数据竞争处理
+    input [`RegAddrBusW-1:0] ctl_wb_dest_i,
+    input [`RegAddrBusW-1:0] ctl_mem_dest_i,
+    input [`RegAddrBusW-1:0] ctl_ex_dest_i,
+    input ctl_if_over_i,
+    input ctl_id_valid_i,
+    output ctl_id_over_o,
     output [`ID2EXBusSize - 1:0] id2ex_bus_o
 
 );
     // 从 IF 获取 PC+4 和 instruction
-    wire [31:0] __pc;
     wire [31:0] pc;
+    wire [31:0] ppc;
     wire [31:0] inst;
-    assign {__pc, pc, inst} = if2id_bus_ri;
+    assign {pc, ppc, inst} = if2id_bus_ri;
     // assign pc = if_id_pcnow_i;
     // assign inst = if_id_inst_i;
 
@@ -294,13 +289,14 @@ module id(
                     | inst_BLT | inst_BGE | inst_BLTU | inst_BGEU | inst_store;
 
     // //依据源寄存器号分类
-    // wire inst_no_rs;  //指令rs域非0，且不是从寄存器堆读rs的数据
-    // wire inst_no_rt;  //指令rt域非0，且不是从寄存器堆读rt的数据
-    // assign inst_no_rs = inst_MTC0 | inst_SYSCALL | inst_ERET;
-    // assign inst_no_rt = inst_ADDIU | inst_SLTI | inst_SLTIU
-    //                     | inst_BGEZ  | inst_load | inst_imm_zero
-    //                     | inst_J     | inst_JAL  | inst_MFC0
-    //                     | inst_SYSCALL;
+    wire inst_no_rj;  //指令rs域非0，且不是从寄存器堆读rs的数据
+    wire inst_no_rk;  //指令rt域非0，且不是从寄存器堆读rt的数据
+    assign inst_no_rj = inst_LU12I_W | inst_PCADDU12I | inst_B | inst_BL;
+    assign inst_no_rk = inst_SLLI_W | inst_SRLI_W | inst_SRAI_W
+                        | inst_SLTI | inst_SLTUI | inst_ADDI_W
+                        | inst_ANDI | inst_ORI  | inst_XOR
+                        | inst_load | inst_store | inst_jbr
+                        | inst_LU12I_W | inst_PCADDU12I;
 
     /*==================================================*/
     //                    取寄存器值
@@ -351,7 +347,7 @@ module id(
     // jump and branch指令
     wire jbr_taken;
     wire [31:0] jbr_target;
-    assign jbr_taken  = j_taken | br_taken; 
+    assign jbr_taken  = (j_taken | br_taken) & ctl_id_over_o; // 要求应当计算完毕，若出现数据竞争，则会回退
     assign jbr_target = j_taken ? j_target : br_target;
     
     // ID到IF的跳转总线
@@ -419,7 +415,27 @@ module id(
     assign id_wb_rd_addr = inst_wdest_none ? 5'd0 :
                         inst_wdest_r1 ? 5'd1 : rd_addr;
 
-    assign id2ex_bus_o = {id_aluop, id_rj, id_rk, id_mem_ctl, id_mem_st_data, id_wb_rd_addr, id_wb_rd_we, __pc};
+    assign id2ex_bus_o = {id_aluop, id_rj, id_rk, id_mem_ctl, id_mem_st_data, id_wb_rd_addr, id_wb_rd_we, pc};
+
+
+    /*==================================================*/
+    //                控制信号与冒险处理
+    /*==================================================*/
+    wire rj_hazard;
+    wire rk_hazard;
+    assign rj_hazard = ~inst_no_rj 
+                    & (rj_addr_o != 5'd0)
+                    & (  (ctl_ex_dest_i == rj_addr_o)
+                        |(ctl_mem_dest_i == rj_addr_o)
+                        |(ctl_wb_dest_i == rj_addr_o));
+    assign rk_hazard = ~inst_no_rk 
+                    & (rk_addr_o != 5'd0)
+                    & (  (ctl_ex_dest_i == rk_addr_o)
+                        |(ctl_mem_dest_i == rk_addr_o)
+                        |(ctl_wb_dest_i == rk_addr_o));
+    
+    // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
+    assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | (inst_jbr & ctl_if_over_i));
 
     /**
       *            Wait for implementing

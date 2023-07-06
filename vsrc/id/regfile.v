@@ -3,6 +3,7 @@
 module regfile(
     input               clk_i,
     input               rst_i,
+    input               we_i,
     input      [4 :0] raddr1_i,
     input      [4 :0] raddr2_i,
     input      [4 :0] waddr_i,
@@ -15,7 +16,8 @@ module regfile(
 
     // write
     always @(posedge clk_i) begin
-        regfile[waddr_i] <= wdata_i;
+        if (we_i) 
+            regfile[waddr_i] <= wdata_i;
     end
     
     // read port 1

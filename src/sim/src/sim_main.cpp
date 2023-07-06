@@ -5,6 +5,7 @@
 #include "Vtop___024root.h"
 #include "verilated.h"
 #include "VcdWriter.h"
+#include "CpuTracer.h"
 #include <memory>
 #include <random>
 #include <bitset>
@@ -25,87 +26,27 @@ using std::bitset;
 
 int main(int argc, char **argv) {
     srand(time(0));
-    VerilatedContext *contextp = new VerilatedContext;
-    contextp->commandArgs(argc, argv);
-    Vtop *top = new Vtop{contextp};
 
-    VcdWriter vcdWriter("top.vcd", contextp, top, 99);
-
-    int64_t count = 0;
-
-    // reset
-    top->clk_i = 0;
-    top->rst_i = 1;
-    vcdWriter.tick();
-    top->clk_i = 1;
-    top->rst_i = 1;
-    vcdWriter.tick();
+    CpuTracer<Vtop> tp{argc, argv};
+    tp.enable_trace("top.vcd");
 
 
-    // write start
-    top->clk_i = 0;
-    top->rst_i = 0;
+    tp.reset_all();
 
-    top->start_i = 1;
-    top->rw_i    = 0;
-    top->data_i  = 0x89ABCDEF;
-    top->addr_i  = SET_BIT(0x00123456, 20).to_ulong();
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
+    for (int i = 0; i < 100; ++i) {
+        tp.step();
+    }
 
 
-    top->clk_i = 1;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
+    // print_info("PC = 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
 
 
-    top->clk_i = 0;
-
-    top->rw_i   = 0;
-    top->data_i = 0x89ABCDEF;
-    top->addr_i = SET_BIT(0x00123456, 20).to_ulong();
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-    top->clk_i = 1;
-
-    top->rw_i   = 1;
-    top->data_i = 0;
-    top->addr_i = 0;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-    // write end
-
-    // read start
-    top->clk_i = 0;
-
-    top->rw_i   = 1;
-    top->addr_i = SET_BIT(0x00123456, 20).to_ulong();
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-
-    top->clk_i = 1;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-
-    top->clk_i = 0;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-    top->clk_i = 1;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-    top->clk_i = 0;
-    vcdWriter.tick();
-    print_info("clk = %d, rw = %d, r_ready_o = %d, w_finish_o = %d, addr= 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->clk_i, top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
+    // top->clk_i = 1;
 
     // while (!contextp->gotFinish() && count < MAX_TEST) {
     // }
 
-    delete top;
-    delete contextp;
+    // delete top;
+    // delete contextp;
     return 0;
 }

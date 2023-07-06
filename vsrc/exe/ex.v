@@ -4,8 +4,14 @@ module ex(
     // input              EXE_valid,    // 执行级有效信号
     // input      [166:0] ID_EXE_bus_r, // ID->EXE总线
     // output             EXE_over,     // EXE模块执行完成
+
     input  [`ID2EXBusSize - 1:0]    id2ex_bus_ri,
-    output [`EX2MEMBusSize - 1:0]   ex2mem_bus_o
+    output [`EX2MEMBusSize - 1:0]   ex2mem_bus_o,
+
+    input ctl_ex_valid_i,
+    output ctl_ex_over_o,
+    output [`RegAddrBusW-1:0] ctl_ex_dest_o
+
     
     //5级流水新增
     // input              clk,       // 时钟
@@ -68,16 +74,7 @@ module ex(
     // );
 
 
-//-----{EXE执行完成}begin
-    //对于ALU操作，都是1拍可完成，
-    //但对于乘法操作，需要多拍完成
-    // assign EXE_over = EXE_valid & (~multiply | mult_end);
-//-----{EXE执行完成}end
 
-//-----{EXE模块的dest值}begin
-   //只有在EXE模块有效时，其写回目的寄存器号才有意义
-    // assign EXE_wdest = rf_wdest & {5{EXE_valid}};
-//-----{EXE模块的dest值}end
 
     /*==================================================*/
     //              下级所需数据/总线生成
@@ -98,6 +95,17 @@ module ex(
         id_wb_rd_addr,              // 写回的目的寄存器
         id_wb_rd_we,                // 写回的寄存器写使能
         pc};                        // PC
+
+    /*==================================================*/
+    //                控制信号与冒险处理
+    /*==================================================*/
+    //对于ALU操作，都是1拍可完成，
+    //但对于乘法操作，需要多拍完成
+    assign ctl_ex_over_o = ctl_ex_valid_i /* & (~multiply | mult_end) */ ;
+
+    //只有在EXE模块有效时，其写回目的寄存器号才有意义
+    assign ctl_ex_dest_o = id_wb_rd_addr & {5{ctl_ex_valid_i}};
+
 
 
 endmodule

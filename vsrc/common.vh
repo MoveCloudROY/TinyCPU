@@ -1,10 +1,13 @@
 `timescale 1 ns/1 ps
+`ifndef CPU_COMMON
+`define CPU_COMMON
 
 
 /*==============================================*/
 //                    ABI 相关
 /*==============================================*/
-`define LOONG_PC_START_ADDR   32'h1c000000
+// `define LOONG_PC_START_ADDR   32'h1c000000
+`define LOONG_PC_START_ADDR   32'h00000000
 
 
 /*==============================================*/
@@ -107,3 +110,6 @@
 `define INST_BGE       6'b11001
 `define INST_BLTU      6'b11010
 `define INST_BGEU      6'b11011
+
+
+`endif
