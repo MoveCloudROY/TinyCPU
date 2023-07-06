@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
 
     tp.reset_all();
 
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 260; ++i) {
         tp.step();
     }
 
