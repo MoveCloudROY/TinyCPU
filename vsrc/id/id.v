@@ -289,13 +289,13 @@ module id(
                     | inst_BLT | inst_BGE | inst_BLTU | inst_BGEU | inst_store;
 
     // //依据源寄存器号分类
-    wire inst_no_rj;  //指令rs域非0，且不是从寄存器堆读rs的数据
-    wire inst_no_rk;  //指令rt域非0，且不是从寄存器堆读rt的数据
+    wire inst_no_rj;  // rj 域非0，且不是从寄存器堆读 rj的指令
+    wire inst_no_rk;  // rk 域非0，且不是从寄存器堆读 rk 的指令 ( store 指令依赖 rd, 但之后取到 rk )
     assign inst_no_rj = inst_LU12I_W | inst_PCADDU12I | inst_B | inst_BL;
     assign inst_no_rk = inst_SLLI_W | inst_SRLI_W | inst_SRAI_W
                         | inst_SLTI | inst_SLTUI | inst_ADDI_W
                         | inst_ANDI | inst_ORI  | inst_XOR
-                        | inst_load | inst_store | inst_jbr
+                        | inst_jbr  | inst_load  /*| inst_store */
                         | inst_LU12I_W | inst_PCADDU12I;
 
     /*==================================================*/
@@ -435,7 +435,7 @@ module id(
                         |(ctl_wb_dest_i == rk_addr_o));
     
     // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
-    assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | (inst_jbr & ctl_if_over_i));
+    assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | ctl_if_over_i);
 
     /**
       *            Wait for implementing

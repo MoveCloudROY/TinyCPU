@@ -56,6 +56,9 @@ module top (
     wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
     wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
     wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
+    
+    wire ctl_jbr_taken;
+    assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in;
@@ -176,6 +179,7 @@ module top (
         .if_inst_i(if_inst_c),
         .if2id_bus_ro(if2id_bus_r),
 
+        .ctl_jbr_taken_i(ctl_jbr_taken),
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_allow_in_i(ctl_id_allow_in)
     );

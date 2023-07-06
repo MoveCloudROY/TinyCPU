@@ -21,15 +21,15 @@ module wb(
     wire [31:0] mem_result;
     
     //寄存器堆写使能和写地址
-    wire [4:0] wdest;
-    wire wen;
+    wire [4:0] wb_wdest;
+    wire wb_we;
     
     
     //pc
     wire [31:0] pc;    
     assign {
-        wdest,
-        wen,
+        wb_wdest,
+        wb_we,
         mem_result,
         pc } = mem2wb_bus_ri;
         
@@ -37,8 +37,8 @@ module wb(
     /*==================================================*/
     //                   写回信号输出
     /*==================================================*/
-    assign rf_we_o   = wen & ctl_wb_over_o;
-    assign rf_wdest_o = wdest;
+    assign rf_we_o   = wb_we & ctl_wb_over_o;
+    assign rf_wdest_o = wb_wdest;
     assign rf_wdata_o = mem_result;
 
 

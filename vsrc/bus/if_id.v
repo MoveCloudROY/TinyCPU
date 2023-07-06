@@ -10,7 +10,7 @@ module if_id(
     // 控制信号 
     input ctl_if_over_i,
     input ctl_id_allow_in_i,
-
+    input ctl_jbr_taken_i,
     // ID 阶段信号
     output reg [`IF2IDBusSize - 1:0]  if2id_bus_ro
 );
@@ -27,6 +27,8 @@ module if_id(
         if (rst_i) begin
             if2id_bus_ro <= {32'd0, 32'd0, 32'd0};
             if_id_pcpre <= 32'd0;
+        end else if (ctl_jbr_taken_i) begin
+            if2id_bus_ro <= {32'd0, if_id_pcpre, 32'd0};
         end else if(ctl_if_over_i && ctl_id_allow_in_i) begin
             if_id_pcpre <= if_pc_i;
             // 向 ID 传递 PC INST

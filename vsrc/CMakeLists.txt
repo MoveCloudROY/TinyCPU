@@ -4,7 +4,7 @@ file(GLOB_RECURSE FILES CONFIGURE_DEPENDS *.v)
 list(FILTER FILES EXCLUDE REGEX ".*top\\.v$")
 message(${FILES})
 
-set(PATH ${CMAKE_SOURCE_DIR}/assets/test.raw)
+set(PATH ${CMAKE_SOURCE_DIR}/assets/fib.raw)
 
 verilate(
     vsrc COVERAGE TRACE

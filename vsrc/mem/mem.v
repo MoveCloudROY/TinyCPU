@@ -26,8 +26,8 @@ module mem(
     wire [`RegW - 1:0] exe_result;
     
     //写回需要用到的信息
-    wire [4:0] rf_wdest;  //写回的目的寄存器
-    wire       rf_wen;    //写回的寄存器写使能
+    wire [4:0] wb_wdest;  //写回的目的寄存器
+    wire       wb_we;    //写回的寄存器写使能
     
     
     //pc
@@ -37,8 +37,8 @@ module mem(
         mem_control,
         store_data,
         exe_result,
-        rf_wdest,
-        rf_wen,
+        wb_wdest,
+        wb_we,
         pc 
     } = ex2mem_bus_ri;  
 
@@ -100,7 +100,7 @@ module mem(
     assign mem_result = inst_load ? load_result : exe_result;
     
     assign mem2wb_bus_o = {
-        rf_wdest,rf_wen,    // WB需要使用的信号
+        wb_wdest,wb_we,    // WB需要使用的信号
         mem_result,         // 最终要写回寄存器的数据
         pc                  // PC值
     };                               
@@ -108,7 +108,7 @@ module mem(
     /*==================================================*/
     //                控制信号与冒险处理
     /*==================================================*/
-    assign ctl_mem_dest_o = rf_wdest & {5{ctl_mem_valid_i}};
+    assign ctl_mem_dest_o = wb_wdest & {5{ctl_mem_valid_i}};
 
     assign ctl_mem_over_o = ctl_mem_valid_i;
 
