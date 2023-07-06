@@ -1,31 +1,65 @@
 `include "common.vh"
 module top (
+
+
+    // _verilator 仿真参数
+`ifdef VERILATOR 
     input wire clk_i,
     input wire rst_i
     
-    // // 启动信号
-    // input start_i,
-    // // 选择读(1)写(0) 
-    // input rw_i,
-    // // 数据读写 from CPU 
-    // input [31:0] data_i,
-	// output [31:0] data_o,
-    // // 地址 from CPU
-    // input [23:0] addr_i,
-    
-    // // 读-数据 就位
-    // output reg r_ready_o,
-    // // 写-数据 完成
-    // output reg w_finish_o,
-    // // 工作中
-    // output reg busy_o
-    
-    // // inout wire[31:0] base_ram_data,  //BaseRAM数据，低8位与CPLD串口控制器共享
-    // // output wire[19:0] base_ram_addr, //BaseRAM地址
-    // // output wire[3:0] base_ram_be_n,  //BaseRAM字节使能，低有效。如果不使用字节使能，请保持为0
-    // // output wire base_ram_ce_n,       //BaseRAM片选，低有效
-    // // output wire base_ram_oe_n,       //BaseRAM读使能，低有效
-    // // output wire base_ram_we_n       //BaseRAM写使能，低有效
+    // vivado 仿真参数
+`else
+    input wire          clk_50M     ,       //50MHz 时钟输入
+    input wire          clk_11M0592 ,       //11.0592MHz 时钟输入（备用，可不用）
+
+    input wire          clock_btn   ,       //BTN5手动时钟按钮开关，带消抖电路，按下时为1
+    input wire          reset_btn   ,       //BTN6手动复位按钮开关，带消抖电路，按下时为1
+
+    input  wire[3:0]    touch_btn   ,       //BTN1~BTN4，按钮开关，按下时为1
+    input  wire[31:0]   dip_sw      ,       //32位拨码开关，拨到“ON”时为1
+    output wire[15:0]   leds        ,       //16位LED，输出时1点亮
+    output wire[7:0]    dpy0        ,       //数码管低位信号，包括小数点，输出1点亮
+    output wire[7:0]    dpy1        ,       //数码管高位信号，包括小数点，输出1点亮
+
+    //BaseRAM信号
+    inout  wire[31:0]   base_ram_data,      //BaseRAM数据，低8位与CPLD串口控制器共享
+    output wire[19:0]   base_ram_addr,      //BaseRAM地址
+    output wire[3:0]    base_ram_be_n,      //BaseRAM字节使能，低有效。如果不使用字节使能，请保持为0
+    output wire         base_ram_ce_n,      //BaseRAM片选，低有效
+    output wire         base_ram_oe_n,      //BaseRAM读使能，低有效
+    output wire         base_ram_we_n,      //BaseRAM写使能，低有效
+
+    //ExtRAM信号
+    inout  wire[31:0]   ext_ram_data ,      //ExtRAM数据
+    output wire[19:0]   ext_ram_addr ,      //ExtRAM地址
+    output wire[3:0]    ext_ram_be_n ,      //ExtRAM字节使能，低有效。如果不使用字节使能，请保持为0
+    output wire         ext_ram_ce_n ,      //ExtRAM片选，低有效
+    output wire         ext_ram_oe_n ,      //ExtRAM读使能，低有效
+    output wire         ext_ram_we_n ,      //ExtRAM写使能，低有效
+
+    //直连串口信号
+    output wire txd,  //直连串口发送端
+    input  wire rxd,  //直连串口接收端
+
+    //Flash存储器信号，参考 JS28F640 芯片手册
+    output wire [22:0]flash_a,      //Flash地址，a0仅在8bit模式有效，16bit模式无意义
+    inout  wire [15:0]flash_d,      //Flash数据
+    output wire flash_rp_n,         //Flash复位信号，低有效
+    output wire flash_vpen,         //Flash写保护信号，低电平时不能擦除、烧写
+    output wire flash_ce_n,         //Flash片选信号，低有效
+    output wire flash_oe_n,         //Flash读使能信号，低有效
+    output wire flash_we_n,         //Flash写使能信号，低有效
+    output wire flash_byte_n,       //Flash 8bit模式选择，低有效。在使用flash的16位模式时请设为1
+
+    //图像输出信号
+    output wire[2:0] video_red,    //红色像素，3位
+    output wire[2:0] video_green,  //绿色像素，3位
+    output wire[1:0] video_blue,   //蓝色像素，2位
+    output wire video_hsync,       //行同步（水平同步）信号
+    output wire video_vsync,       //场同步（垂直同步）信号
+    output wire video_clk,         //像素时钟输出
+    output wire video_de           //行数据有效信号，用于区分消隐区
+`endif
 
 );
 
@@ -56,7 +90,8 @@ module top (
     wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
     wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
     wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
-    
+    // ID->IF 提前跳转总线
+    wire [32:0] jbr_bus_c;
     wire ctl_jbr_taken;
     assign ctl_jbr_taken = jbr_bus_c[32];
 
@@ -66,6 +101,73 @@ module top (
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
     assign ctl_mem_allow_in = ~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in );
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
+
+
+    /*==================================================*/
+    //                流水数据信号定义部分
+    /*==================================================*/
+    /*================================*/
+    //            数据通路
+    /*================================*/
+    // IF->InstRAM 取指令
+    wire [`RegW-1:0] if_pc_c;
+    // IF->IF/ID 构建级间寄存器
+    wire [`RegW-1:0] if_inst_c;
+
+    // ID->Regfile 取值
+    wire [`RegW-1:0] rj_data_c;
+    wire [`RegW-1:0] rk_data_c;
+    wire [`RegAddrBusW-1:0] rj_addr_c;
+    wire [`RegAddrBusW-1:0] rk_addr_c;
+
+    // MEM->DataRAM 访存相关
+    wire [ 31:0] dm_rdata_c;
+    wire [ 31:0] dm_addr_c;
+    wire [  3:0] dm_wbe_n_c;
+    wire [ 31:0] dm_wdata_c;
+    wire         dm_rw_c;
+
+    // WB->Regfile 写回寄存器
+    wire [  4:0] rf_wdest_c;
+    wire           rf_we_c;
+    wire [ 31:0] rf_wdata_c;
+
+    /*================================*/
+    //           级间总线信号
+    /*================================*/
+    wire [`IF2IDBusSize - 1:0]  if2id_bus_r;
+    wire [`ID2EXBusSize - 1:0]  id2ex_bus_c;
+    wire [`ID2EXBusSize - 1:0]  id2ex_bus_r;
+    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_c;
+    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_r;
+    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_c;
+    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_r;
+
+    /*==================================================*/
+    //                   仿真信号转接
+    /*==================================================*/
+`ifndef VERILATOR
+    wire   clk_i;
+    wire   rst_i;
+    assign clk_i = clk_50M;
+    assign rst_i = reset_btn;
+
+    // 指令 rom 接口
+    assign base_ram_data = if_inst_c;
+    assign base_ram_addr = if_pc_c[21:2];
+    assign base_ram_be_n = 4'd0;
+    assign base_ram_ce_n = 0;
+    assign base_ram_oe_n = 0;
+    assign base_ram_we_n = 1;
+
+    // 数据 ram 接口
+    assign ext_ram_data =  dm_rw_c ? dm_rdata_c : dm_wdata_c;
+    assign ext_ram_addr =  dm_addr_c[21:2];
+    assign ext_ram_be_n =  dm_wbe_n_c;
+    assign ext_ram_ce_n =  0;
+    assign ext_ram_oe_n =  ~dm_rw_c;
+    assign ext_ram_we_n =  dm_rw_c;
+`endif
 
     /*==================================================*/
     //                  流水控制信号转移
@@ -110,49 +212,6 @@ module top (
             ctl_wb_valid <= ctl_mem_over;
         end
     end
-
-
-    /*==================================================*/
-    //                流水数据信号定义部分
-    /*==================================================*/
-    /*================================*/
-    //            数据通路
-    /*================================*/
-    // ID->IF 提前跳转总线
-    wire [32:0] jbr_bus_c;
-    // IF->InstRAM 取指令
-    wire [`RegW-1:0] if_pc_c;
-    // IF->IF/ID 构建级间寄存器
-    wire [`RegW-1:0] if_inst_c;
-
-    // ID->Regfile 取值
-    wire [`RegW-1:0] rj_data_c;
-    wire [`RegW-1:0] rk_data_c;
-    wire [`RegAddrBusW-1:0] rj_addr_c;
-    wire [`RegAddrBusW-1:0] rk_addr_c;
-
-    // MEM->DataRAM 访存相关
-    wire [ 31:0] dm_rdata_c;
-    wire [ 31:0] dm_addr_c;
-    wire [  3:0] dm_wbe_n_c;
-    wire [ 31:0] dm_wdata_c;
-    wire         dm_rw_c;
-
-    // WB->Regfile 写回寄存器
-    wire [  4:0] rf_wdest_c;
-    wire           rf_we_c;
-    wire [ 31:0] rf_wdata_c;
-
-    /*================================*/
-    //           级间总线信号
-    /*================================*/
-    wire [`IF2IDBusSize - 1:0]  if2id_bus_r;
-    wire [`ID2EXBusSize - 1:0]  id2ex_bus_c;
-    wire [`ID2EXBusSize - 1:0]  id2ex_bus_r;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_c;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_r;
-    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_c;
-    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_r;
 
 
     /*==================================================*/
@@ -297,7 +356,8 @@ module top (
     //        ram controller
     /*================================*/
 
-`ifdef VERILATOR
+// _verilator 仿真模块
+`ifdef VERILATOR 
     IROM #(.ADDR_BITS(20)) U_irom (
         .a(if_pc_c[21:2]),
         .spo(if_inst_c)
@@ -345,73 +405,79 @@ module top (
     //     .wdata(dm_wdata_c[31:16]),
     //     .rdata(dm_rdata_c[31:16])
     // );
+
+// vivado 仿真模块
 `else
-    // sram_model U_sram_1(
-    //     .Address(w_rom_addr),
+
+    wire locked, clk_cpu, clk_20M;
+    pll_example clock_gen 
+    (
+        // Clock in ports
+        .clk_in1(clk_50M),  // 外部时钟输入
+        // Clock out ports
+        .clk_out1(clk_cpu), // 时钟输出1，频率在IP配置界面中设置
+        .clk_out2(clk_20M), // 时钟输出2，频率在IP配置界面中设置
+        // Status and control signals
+        .reset(reset_btn), // PLL复位输入
+        .locked(locked)    // PLL锁定指示输出，"1"表示时钟稳定，
+                            // 后级电路复位信号应当由它生成（见下）
+    );
+
+    reg reset_of_clk_cpu;
+    // 异步复位，同步释放，将locked信号转为后级电路的复位reset_of_clk_cpu
+    always@(posedge clk_cpu or negedge locked) begin
+        if(~locked) reset_of_clk_cpu <= 1'b1;
+        else        reset_of_clk_cpu <= 1'b0;
+    end
+
+    // always@(posedge clk_cpu or posedge reset_of_clk_cpu) begin
+    //     if(reset_of_clk_cpu)begin
+    //         // Your Code
+    //     end
+    //     else begin
+    //         // Your Code
+    //     end
+    // end
+    // sram_model U_irom_1(
+    //     .Address(if_pc_c[21:2]),
     //     .DataIO(w_rom_data[15:0]),
-    //     .OE_n(w_rom_oe_n),
-    //     .CE_n(w_rom_ce_n),
-    //     .WE_n(w_rom_we_n),
-    //     .LB_n(w_rom_be_n[0]),
-    //     .UB_n(w_rom_be_n[1])
+    //     .OE_n(0),
+    //     .CE_n(0),
+    //     .WE_n(1),
+    //     .LB_n(0),
+    //     .UB_n(0)
     // );
 
-    // sram_model U_sram_2(
-    //     .Address(w_rom_addr),
+    // sram_model U_irom_2(
+    //     .Address(if_pc_c[21:2]),
     //     .DataIO(w_rom_data[31:16]),
-    //     .OE_n(w_rom_oe_n),
-    //     .CE_n(w_rom_ce_n),
-    //     .WE_n(w_rom_we_n),
-    //     .LB_n(w_rom_be_n[2]),
-    //     .UB_n(w_rom_be_n[3])
+    //     .OE_n(0),
+    //     .CE_n(0),
+    //     .WE_n(1),
+    //     .LB_n(0),
+    //     .UB_n(0)
+    // );
+
+    // sram_model U_iram_1(
+    //     .Address(dm_addr_c[21:2]),
+    //     .DataIO(w_rom_data[15:0]),
+    //     .OE_n(dm_rw_c),
+    //     .CE_n(0),
+    //     .WE_n(~dm_rw_c),
+    //     .LB_n(dm_wbe_n_c[0]),
+    //     .UB_n(dm_wbe_n_c[1])
+    // );
+
+    // sram_model U_iram_2(
+    //     .Address(dm_addr_c[21:2]),
+    //     .DataIO(w_rom_data[31:16]),
+    //     .OE_n(dm_rw_c),
+    //     .CE_n(0),
+    //     .WE_n(~dm_rw_c),
+    //     .LB_n(dm_wbe_n_c[2]),
+    //     .UB_n(dm_wbe_n_c[3])
     // );
 `endif
-    // sram_ctl U_rom_ctl(
-    //     .clk_i(clk_i),
-    //     .rst_i(rst_i),
-    //     .start_i(1),
-    //     .rw_i(1),
-    //     .data_i(0),
-    //     .data_be_i(0),
-
-    //     .data_o(if_inst_c),
-    //     .addr_i(if_pc_c[23:0]),
-
-    //     .r_ready_o(r_ready_o),
-    //     .w_finish_o(w_finish_o),
-    //     .busy_o(busy_o),
-
-    //     .base_ram_data(w_rom_data),
-    //     .base_ram_addr(w_rom_addr),
-    //     .base_ram_be_n(w_rom_be_n),
-    //     .base_ram_ce_n(w_rom_ce_n),
-    //     .base_ram_oe_n(w_rom_oe_n),
-    //     .base_ram_we_n(w_rom_we_n)
-    // );
-
-    // sram_ctl U_ram_ctl(
-    //     .clk_i(clk_i),
-    //     .rst_i(rst_i),
-    //     .start_i(1),
-
-    //     .rw_i(dm_rw_c),
-    //     .data_i(dm_wdata_c),
-    //     .data_be_i(dm_wbe_n_c),
-    //     .data_o(dm_rdata_c),
-    //     .addr_i(dm_addr_c[23:0]),
-
-    //     .r_ready_o(r_ready_o),
-    //     .w_finish_o(w_finish_o),
-    //     .busy_o(busy_o),
-
-    //     .base_ram_data(w_ram_data),
-    //     .base_ram_addr(w_ram_addr),
-    //     .base_ram_be_n(w_ram_be_n),
-    //     .base_ram_ce_n(w_ram_ce_n),
-    //     .base_ram_oe_n(w_ram_oe_n),
-    //     .base_ram_we_n(w_ram_we_n)
-
-    // );
 
     //--------------------------{各模块实例化}end----------------------------//
 

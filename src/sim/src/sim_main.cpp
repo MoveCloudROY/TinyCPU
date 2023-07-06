@@ -37,16 +37,5 @@ int main(int argc, char **argv) {
         tp.step();
     }
 
-
-    // print_info("PC = 0x%08X, data_i = 0x%08X, data_o = 0x%08X", top->rw_i, top->r_ready_o, top->w_finish_o, top->addr_i, top->data_i, top->data_o);
-
-
-    // top->clk_i = 1;
-
-    // while (!contextp->gotFinish() && count < MAX_TEST) {
-    // }
-
-    // delete top;
-    // delete contextp;
     return 0;
 }

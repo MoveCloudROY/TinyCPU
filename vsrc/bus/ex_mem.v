@@ -7,7 +7,7 @@ module ex_mem(
     output reg [`EX2MEMBusSize - 1 :0] ex2mem_bus_ro,
 
     input wire ctl_ex_over_i,
-    output wire ctl_mem_allow_in_i
+    input wire ctl_mem_allow_in_i
 );
 
     always @(posedge clk_i) begin
