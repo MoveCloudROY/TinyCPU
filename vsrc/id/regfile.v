@@ -2,7 +2,7 @@
 
 module regfile(
     input               clk_i,
-    input               rst_i,
+    // input               rst_i,
     input               we_i,
     input      [4 :0] raddr1_i,
     input      [4 :0] raddr2_i,

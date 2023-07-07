@@ -26,9 +26,8 @@ module id(
 );
     // 从 IF 获取 PC+4 和 instruction
     wire [31:0] pc;
-    wire [31:0] ppc;
     wire [31:0] inst;
-    assign {pc, ppc, inst} = if2id_bus_ri;
+    assign {pc, inst} = if2id_bus_ri;
     // assign pc = if_id_pcnow_i;
     // assign inst = if_id_inst_i;
 

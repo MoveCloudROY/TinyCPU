@@ -9,6 +9,7 @@ module wb(
     //5级流水新增接口
     
     input  [`MEM2WBBusSize - 1:0] mem2wb_bus_ri, // MEM->WB总线
+    output [`RegW - 1:0]          _occupy_pc_o,  // 占位，避免 warning
 
     input ctl_wb_valid_i,
     output ctl_wb_over_o,
@@ -41,6 +42,7 @@ module wb(
     assign rf_wdest_o = wb_wdest;
     assign rf_wdata_o = mem_result;
 
+    assign _occupy_pc_o = pc;
 
     /*==================================================*/
     //                控制信号与冒险处理

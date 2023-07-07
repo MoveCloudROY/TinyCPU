@@ -125,7 +125,8 @@ module top (
     wire [ 31:0] dm_addr_c;
     wire [  3:0] dm_wbe_n_c;
     wire [ 31:0] dm_wdata_c;
-    wire         dm_rw_c;
+    wire         dm_re_c;
+    wire         dm_we_c;
 
     // WB->Regfile 写回寄存器
     wire [  4:0] rf_wdest_c;
@@ -153,20 +154,42 @@ module top (
     assign rst_i = reset_btn;
 
     // 指令 rom 接口
-    assign base_ram_data = if_inst_c;
+    assign if_inst_c     = base_ram_data;
     assign base_ram_addr = if_pc_c[21:2];
     assign base_ram_be_n = 4'd0;
-    assign base_ram_ce_n = 0;
-    assign base_ram_oe_n = 0;
-    assign base_ram_we_n = 1;
+    assign base_ram_ce_n = 1'b0;
+    assign base_ram_oe_n = 1'b0;
+    assign base_ram_we_n = 1'b1;
 
     // 数据 ram 接口
-    assign ext_ram_data =  dm_rw_c ? dm_rdata_c : dm_wdata_c;
+    assign dm_rdata_c = ext_ram_data;
+    assign ext_ram_data =  dm_we_c ? dm_wdata_c : 32'bz;
     assign ext_ram_addr =  dm_addr_c[21:2];
     assign ext_ram_be_n =  dm_wbe_n_c;
     assign ext_ram_ce_n =  0;
-    assign ext_ram_oe_n =  ~dm_rw_c;
-    assign ext_ram_we_n =  dm_rw_c;
+    assign ext_ram_oe_n =  ~dm_re_c;
+    assign ext_ram_we_n =  ~dm_we_c;
+
+    assign leds         = 0;
+    assign dpy0         = 0;
+    assign dpy1         = 0;
+    assign txd          = 1;
+    assign flash_a      = 0;
+    assign flash_d      = 0;
+    assign flash_rp_n   = 1;
+    assign flash_vpen   = 0;
+    assign flash_ce_n   = 1;
+    assign flash_oe_n   = 1;
+    assign flash_we_n   = 1;
+    assign flash_byte_n = 1;
+    assign video_red    = 0;
+    assign video_green  = 0;
+    assign video_blue   = 0;
+    assign video_hsync  = 0;
+    assign video_vsync  = 0;
+    assign video_clk    = 0;
+    assign video_de     = 0;
+
 `endif
 
     /*==================================================*/
@@ -267,7 +290,7 @@ module top (
 
     regfile U_reg_file(
         .clk_i(clk_i),
-        .rst_i(rst_i),
+        // .rst_i(rst_i),
         .we_i(rf_we_c),
         .raddr1_i(rj_addr_c),
         .raddr2_i(rk_addr_c),
@@ -318,7 +341,8 @@ module top (
         .dm_addr_o(dm_addr_c),
         .dm_wbe_n_o(dm_wbe_n_c),
         .dm_wdata_o(dm_wdata_c),
-        .dm_rw_o(dm_rw_c),
+        .dm_re_o(dm_re_c),
+        .dm_we_o(dm_we_c),
         .ex2mem_bus_ri(ex2mem_bus_r),
         .mem2wb_bus_o(mem2wb_bus_c),
 
@@ -346,6 +370,7 @@ module top (
         .rf_we_o(rf_we_c),
         .rf_wdata_o(rf_wdata_c),
         .mem2wb_bus_ri(mem2wb_bus_r),
+        ._occupy_pc_o(),
 
         .ctl_wb_valid_i(ctl_wb_valid),
         .ctl_wb_over_o(ctl_wb_over),
@@ -409,26 +434,26 @@ module top (
 // vivado 仿真模块
 `else
 
-    wire locked, clk_cpu, clk_20M;
-    pll_example clock_gen 
-    (
-        // Clock in ports
-        .clk_in1(clk_50M),  // 外部时钟输入
-        // Clock out ports
-        .clk_out1(clk_cpu), // 时钟输出1，频率在IP配置界面中设置
-        .clk_out2(clk_20M), // 时钟输出2，频率在IP配置界面中设置
-        // Status and control signals
-        .reset(reset_btn), // PLL复位输入
-        .locked(locked)    // PLL锁定指示输出，"1"表示时钟稳定，
-                            // 后级电路复位信号应当由它生成（见下）
-    );
+    // wire locked, clk_cpu, clk_20M;
+    // pll_example clock_gen 
+    // (
+    //     // Clock in ports
+    //     .clk_in1(clk_50M),  // 外部时钟输入
+    //     // Clock out ports
+    //     .clk_out1(clk_cpu), // 时钟输出1，频率在IP配置界面中设置
+    //     .clk_out2(clk_20M), // 时钟输出2，频率在IP配置界面中设置
+    //     // Status and control signals
+    //     .reset(reset_btn), // PLL复位输入
+    //     .locked(locked)    // PLL锁定指示输出，"1"表示时钟稳定，
+    //                         // 后级电路复位信号应当由它生成（见下）
+    // );
 
-    reg reset_of_clk_cpu;
-    // 异步复位，同步释放，将locked信号转为后级电路的复位reset_of_clk_cpu
-    always@(posedge clk_cpu or negedge locked) begin
-        if(~locked) reset_of_clk_cpu <= 1'b1;
-        else        reset_of_clk_cpu <= 1'b0;
-    end
+    // reg reset_of_clk_cpu;
+    // // 异步复位，同步释放，将locked信号转为后级电路的复位reset_of_clk_cpu
+    // always@(posedge clk_cpu or negedge locked) begin
+    //     if(~locked) reset_of_clk_cpu <= 1'b1;
+    //     else        reset_of_clk_cpu <= 1'b0;
+    // end
 
     // always@(posedge clk_cpu or posedge reset_of_clk_cpu) begin
     //     if(reset_of_clk_cpu)begin

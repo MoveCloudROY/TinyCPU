@@ -6,7 +6,8 @@ module mem(
     output     [ 31:0] dm_addr_o,                       // 访存读写地址
     output reg [  3:0] dm_wbe_n_o,                      // 访存写使能
     output reg [ 31:0] dm_wdata_o,                      // 访存写数据
-    output     dm_rw_o,                                 // 选择读(1)写(0) 
+    output     dm_re_o,                                 // 选择读(1)写(0) 
+    output     dm_we_o,
 
     input      [`EX2MEMBusSize - 1:0] ex2mem_bus_ri,    // EXE->MEM总线
     output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o,     // MEM->WB总线
@@ -54,14 +55,15 @@ module mem(
     assign {inst_load,inst_store,ld_bh_sign,ld_st_size} = mem_control;
 
     // 选择读写
-    assign dm_rw_o = inst_load & !inst_store;
+    assign dm_re_o = inst_load;
+    assign dm_we_o = inst_store;
     // 访存读写地址
     assign dm_addr_o = exe_result;
     
     // store操作的写使能
     always @ (*)
     begin
-        if (ctl_mem_valid_i && inst_store) // 访存级有效时,才可以进行 store 操作
+        if (ctl_mem_valid_i && (inst_store || inst_load)) // 访存级有效时,才可以进行 store 操作
         begin
             case (ld_st_size)
                 3'b100  : dm_wbe_n_o = 4'b1110;

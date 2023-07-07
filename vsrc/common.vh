@@ -7,7 +7,11 @@
 //                    ABI 相关
 /*==============================================*/
 // `define LOONG_PC_START_ADDR   32'h1c000000
-`define LOONG_PC_START_ADDR   32'h00000000
+`ifdef VERILATOR
+    `define LOONG_PC_START_ADDR   32'h00000000
+`else
+    `define LOONG_PC_START_ADDR   32'h80000004
+`endif
 
 
 /*==============================================*/
@@ -31,7 +35,7 @@
 /*==============================================*/
 //                级间寄存器相关
 /*==============================================*/
-`define IF2IDBusSize        (3 * `RegW)
+`define IF2IDBusSize        (2 * `RegW)
 `define ID2EXBusSize        (12 + 2 * `RegW + 6 + `RegW + `RegAddrBusW + 1 + `RegW)
 `define EX2MEMBusSize       (6 + `RegW + `RegW + `RegAddrBusW + 1 + `RegW)
 `define MEM2WBBusSize       (5 + 1 + `RegW + `RegW)
