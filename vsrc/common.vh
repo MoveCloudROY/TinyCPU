@@ -8,7 +8,7 @@
 /*==============================================*/
 // `define LOONG_PC_START_ADDR   32'h1c000000
 `ifdef VERILATOR
-    `define LOONG_PC_START_ADDR   32'h00000000
+    `define LOONG_PC_START_ADDR   32'h00000004
 `else
     `define LOONG_PC_START_ADDR   32'h80000004
 `endif

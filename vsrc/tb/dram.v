@@ -24,12 +24,13 @@ module DRAM # (
                 mem[j] = 0;
             end
         end
-        mem_file = $fopen(`STRINGIFY(`PATH), "r");
+        $display("[INFO] RAM file at %s", `STRINGIFY(`LOONG_BIN_PATH));
+        mem_file = $fopen(`STRINGIFY(`LOONG_BIN_PATH), "r");
         if(mem_file == 0) begin
-            $display("[ERROR] Open file %s failed, please check whether file exists!\n", `STRINGIFY(`PATH));
+            $display("[ERROR] Open file %s failed, please check whether file exists!\n", `STRINGIFY(`LOONG_BIN_PATH));
             $fatal;
         end
-        $display("[INFO] Data RAM initialized with %s", `STRINGIFY(`PATH));
+        $display("[INFO] Data RAM initialized with %s", `STRINGIFY(`LOONG_BIN_PATH));
         $fread(mem_rd, mem_file);
         for (i = 0; i < 2**20; i = i + 2**(20/2)) begin
             for (j = i; j < i + 2**(20/2); j = j + 1) begin

@@ -1,0 +1,3 @@
+[submodule "3rdparty/cemu_for_tiny_cpu"]
+	path = 3rdparty/cemu_for_tiny_cpu
+	url = git@github.com:MoveCloudROY/cemu_for_tinycpu.git
