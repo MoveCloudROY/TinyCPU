@@ -25,9 +25,9 @@ struct Status {
 };
 
 // 参考实现缓冲队列
-std::vector<Status> inst_done_q;
+std::queue<Status> inst_done_q;
 
-std::vector<Status> inst_ref_q;
+std::queue<Status> inst_ref_q;
 
 constexpr const size_t Q_SIZE = 6;
 
@@ -63,11 +63,11 @@ bool compare_status(const Status &pracImpl, const Status &refImpl) {
 #define CTL_LIGHTBLUE "\033[36;1m"
 #define CTL_RESET "\033[0m"
     if (!pc_equ) {
-        pracStr << CTL_RED << "[PC]" << pracImpl.pc << CTL_RESET << '\n';
-        refStr << CTL_GREEN << "[PC]" << refImpl.pc << CTL_RESET << '\n';
+        pracStr << CTL_RED << "[PC] 0x" << std::hex << pracImpl.pc << CTL_RESET << '\n';
+        refStr << CTL_GREEN << "[PC] 0x" << std::hex << refImpl.pc << CTL_RESET << '\n';
     } else {
-        pracStr << CTL_RESET << "[PC]" << pracImpl.pc << CTL_RESET << '\n';
-        refStr << CTL_RESET << "[PC]" << refImpl.pc << CTL_RESET << '\n';
+        pracStr << CTL_RESET << "[PC] 0x" << std::hex << pracImpl.pc << CTL_RESET << '\n';
+        refStr << CTL_RESET << "[PC] 0x" << std::hex << refImpl.pc << CTL_RESET << '\n';
     }
     for (size_t i = 0; i < 4; ++i) {
         for (size_t j = 0; j < 8; ++j) {
@@ -110,52 +110,52 @@ int main(int argc, char **argv) {
     while (running) {
         // ++stepCnt;
         // print_info("step: %lu", stepCnt);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-        // // 保存 6 条指令
-        // if (inst_wait_q.size() <= Q_SIZE) {
-        //     auto npc = cpuRef.get_pc() - 0x1c000000;
-        //     cpuRef.step();
-        //     inst_wait_q.push_back({npc, cpuRef.get_gpr()});
-        //     // debug("now_pc = %u", npc);
-        //     // print_gpr(inst_wait_q.rbegin()->gpr);
-        // }
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
         // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
         cpu.step();
         uint32_t now_pc = cpu->rootp->top__DOT__mem2wb_bus_r[0];
-        debug("now_pc = %u", now_pc);
+        // debug("now_pc = 0x%08X", now_pc);
         std::array<uint32_t, 32> gpr;
         std::copy(
             std::begin(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
             std::end(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
             gpr.begin()
         );
-        print_gpr(gpr);
+        // print_gpr(gpr);
 
         auto lastPcStatus = Status{lastPc, gpr};
 
         //考虑有效性，当 PC 发生变更，则有效
         if (lastPcStatus.pc != now_pc) {
             // 将上一个 pc状态压入
-            inst_done_q.push_back(lastPcStatus);
+            inst_done_q.push(lastPcStatus);
 
             // 取参考实现的状态
             auto ref_npc = cpuRef.get_pc() - 0x1c000000;
             cpuRef.step();
             auto cpuRefStatus = Status{ref_npc, cpuRef.get_gpr()};
             // 压入状态参考队列
-            inst_ref_q.push_back(cpuRefStatus);
-
+            inst_ref_q.push(cpuRefStatus);
+            // 状态队列维护
+            if (inst_done_q.size() > 5)
+                inst_done_q.pop();
+            if (inst_ref_q.size() > 5)
+                inst_ref_q.pop();
 
             if (!compare_status(lastPcStatus, cpuRefStatus)) {
                 break;
             }
         }
-        lastPc = now_pc;
-
-
+        lastPc  = now_pc;
         running = !cpuRef.is_finished();
+    }
+    std::cout << "\n\n" CTL_ORIANGE "History:" CTL_RESET "\n";
+    while (!inst_done_q.empty()) {
+        auto s = inst_done_q.front();
+        inst_done_q.pop();
+        debug("pc = 0x%08X", s.pc);
+        print_gpr(s.gpr);
     }
     // std::cout << "=====================" << std::endl;
     // std::cout << "Totally Step: " << stepCnt << std::endl;
