@@ -21,15 +21,17 @@ module if_id(
     //   IDPC:   ...    pc0     pc1
     //insaddr:   pc0    pc1     pc2
     //   inst:   ...            inst0   inst1 
-
+    reg [`RegW-1:0] if_prepc;
     always @(posedge clk_i) begin
         if (rst_i) begin
             if2id_bus_ro <= {32'd0, 32'd0};
+            if_prepc <= 32'd0;
         end else if (ctl_jbr_taken_i) begin
-            if2id_bus_ro <= {32'd0, 32'd0};
+            if2id_bus_ro <= {if_prepc, 10'b0000001101, 22'd0};
         end else if(ctl_if_over_i && ctl_id_allow_in_i) begin
             // 向 ID 传递 PC INST
             if2id_bus_ro <= {if_pc_i, if_inst_i};
+            if_prepc <= if_pc_i;
         end
     end
 

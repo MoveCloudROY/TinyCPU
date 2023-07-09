@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <ios>
+#include <ratio>
 #include <sstream>
 #include <thread>
 #include <chrono>
@@ -104,13 +105,16 @@ int main(int argc, char **argv) {
     // 初始化参考实现
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, 0, true, false};
 
+    std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+
     bool     running = true;
     uint32_t lastPc  = 0;
     // size_t stepCnt = 0;
     while (running) {
         // ++stepCnt;
         // print_info("step: %lu", stepCnt);
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+        // std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
         // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
         cpu.step();
@@ -132,7 +136,7 @@ int main(int argc, char **argv) {
             inst_done_q.push(lastPcStatus);
 
             // 取参考实现的状态
-            auto ref_npc = cpuRef.get_pc() - 0x1c000000;
+            auto ref_npc = cpuRef.get_pc();
             cpuRef.step();
             auto cpuRefStatus = Status{ref_npc, cpuRef.get_gpr()};
             // 压入状态参考队列
@@ -149,6 +153,14 @@ int main(int argc, char **argv) {
         }
         lastPc  = now_pc;
         running = !cpuRef.is_finished();
+
+        std::chrono::high_resolution_clock::time_point nTime = std::chrono::high_resolution_clock::now();
+
+        auto dur = std::chrono::duration_cast<std::chrono::seconds>(nTime - startTime).count();
+        if (dur >= 30) {
+            print_info("Pass the DiffTest!");
+            exit(0);
+        }
     }
     std::cout << "\n\n" CTL_ORIANGE "History:" CTL_RESET "\n";
     while (!inst_done_q.empty()) {

@@ -294,7 +294,7 @@ module id(
     assign inst_no_rk = inst_SLLI_W | inst_SRLI_W | inst_SRAI_W
                         | inst_SLTI | inst_SLTUI | inst_ADDI_W
                         | inst_ANDI | inst_ORI  | inst_XOR
-                        | inst_jbr  | inst_load  /*| inst_store */
+                        | inst_B | inst_BL | inst_load  /*| inst_store */
                         | inst_LU12I_W | inst_PCADDU12I;
 
     /*==================================================*/
