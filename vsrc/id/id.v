@@ -231,9 +231,9 @@ module id(
     //                    译码装配
     /*==================================================*/
     //跳转分支指令
-    wire inst_jr;    //寄存器跳转指令
-    wire inst_j_link;//链接跳转指令
-    wire inst_jbr;   //所有分支跳转指令
+    wire inst_jr;    // 跳转不用+PC
+    wire inst_j_link;// 需要写回 PC + 4
+    wire inst_jbr;   // 所有分支跳转指令
     assign inst_jr     = inst_JIRL;
     assign inst_j_link = inst_BL | inst_JIRL;
     assign inst_jbr = inst_JIRL | inst_B    | inst_BL 
@@ -271,7 +271,7 @@ module id(
     // wire inst_shf_sa;
     // assign inst_shf_sa =  inst_SLL | inst_SRL | inst_SRA;
     
-    //依据立即数扩展方式分类
+    // 依据立即数扩展方式分类
     wire inst_imm_zero;   //立即数0扩展
     wire inst_imm_sign12; //12位立即数符号扩展
     wire inst_imm_sign20; //20位立即数符号扩展
@@ -280,14 +280,14 @@ module id(
                         | inst_load | inst_store;
     assign inst_imm_sign20 = inst_PCADDU12I | inst_LU12I_W;
     
-    //依据目的寄存器号分类
+    // 依据目的寄存器号分类
     wire inst_wdest_r1;     // 寄存器堆写入地址为 1的指令
     wire inst_wdest_none;   // 不写寄存器堆的指令
     assign inst_wdest_r1 = inst_BL;
     assign inst_wdest_none = inst_B | inst_BEQ | inst_BNE 
                     | inst_BLT | inst_BGE | inst_BLTU | inst_BGEU | inst_store;
 
-    // //依据源寄存器号分类
+    // 依据源寄存器号分类
     wire inst_no_rj;  // rj 域非0，且不是从寄存器堆读 rj的指令
     wire inst_no_rk;  // rk 域非0，且不是从寄存器堆读 rk 的指令 ( store 指令依赖 rd, 但之后取到 rk )
     assign inst_no_rj = inst_LU12I_W | inst_PCADDU12I | inst_B | inst_BL;

@@ -5,11 +5,19 @@
 #include <iostream>
 #include <string>
 
+#define CTL_RED "\033[31;1m"
+#define CTL_GREEN "\033[32;1m"
+#define CTL_ORIANGE "\033[33;1m"
+#define CTL_BLUE "\033[34;1m"
+#define CTL_PUP "\033[35;1m"
+#define CTL_LIGHTBLUE "\033[36;1m"
+#define CTL_RESET "\033[0m"
 
 // clang-format off
-#define print_err(fmt, args...) printf("[error] \033[31;1m" fmt "\033[0m\n", ##args)
-#define print_info(fmt, args...) printf("[info] \033[33;1m" fmt "\033[0m\n", ##args)
-#define debug(fmt, args...) printf("\033[32;1m" "[DEBUG] %s:%d:%s" "\033[0m  "  fmt "\n", __FILE_NAME__, __LINE__, __func__, ##args)
+#define print_err(fmt, args...) printf(CTL_RED "[error] "  fmt CTL_RESET "\n", ##args)
+#define print_info(fmt, args...) printf(CTL_GREEN "[info] " fmt CTL_RESET "\n", ##args)
+#define print_d(color ,fmt , args...) printf(color fmt CTL_RESET "\n", ##args)
+#define debug(fmt, args...) printf(CTL_BLUE "[DEBUG] %s:%d:%s" CTL_RESET "  "  fmt "\n", __FILE_NAME__, __LINE__, __func__, ##args)
 // clang-format on
 
 #define U8H(x) (int8_t)((int8_t)((x) >> 4) & 0x0F)
@@ -18,40 +26,13 @@
 #define SET_BIT(x, n) (bitset<n>(x))
 
 
-inline void highlightDifferences(const std::string &str1, const std::string &str2) {
-    std::string output;
-
-    // Find the length of the longest common prefix
-    size_t prefixLength = 0;
-    while (prefixLength < str1.length() && prefixLength < str2.length() && str1[prefixLength] == str2[prefixLength]) {
-        prefixLength++;
+template <typename T>
+void print_gpr(T arr) {
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            auto index = i * 4 + j;
+            std::printf("GPR[%2d]: 0x%08X   ", index, arr[index]);
+        }
+        std::printf("\n");
     }
-
-    // Find the length of the longest common suffix
-    size_t suffixLength = 0;
-    while (suffixLength < (str1.length() - prefixLength) && suffixLength < (str2.length() - prefixLength) &&
-           str1[str1.length() - suffixLength - 1] == str2[str2.length() - suffixLength - 1]) {
-        suffixLength++;
-    }
-
-    // Append the common prefix
-    output += str1.substr(0, prefixLength);
-
-    // Append the differing part with highlighting
-    if (prefixLength < str1.length() - suffixLength) {
-        output += "\033[1;31m"; // Set color to red
-        output += str1.substr(prefixLength, str1.length() - prefixLength - suffixLength);
-        output += "\033[0m"; // Reset color
-    }
-    if (prefixLength < str2.length() - suffixLength) {
-        output += "\033[1;32m"; // Set color to green
-        output += str2.substr(prefixLength, str2.length() - prefixLength - suffixLength);
-        output += "\033[0m"; // Reset color
-    }
-
-    // Append the common suffix
-    output += str1.substr(str1.length() - suffixLength);
-
-    // Print the highlighted output
-    std::cout << output << std::endl;
 }

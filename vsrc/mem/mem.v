@@ -60,10 +60,10 @@ module mem(
     // 访存读写地址
     assign dm_addr_o = exe_result;
     
-    // store操作的写使能
+    // load/store操作的读写操作掩码
     always @ (*)
     begin
-        if (ctl_mem_valid_i && (inst_store || inst_load)) // 访存级有效时,才可以进行 store 操作
+        if (ctl_mem_valid_i && (inst_store || inst_load)) // 访存级有效时,才可以进行 load/store 操作
         begin
             case (ld_st_size)
                 3'b100  : dm_wbe_n_o = 4'b1110;

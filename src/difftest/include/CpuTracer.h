@@ -6,6 +6,8 @@
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 
+namespace difftest {
+
 template <typename T>
 class CpuTracer {
 public:
@@ -85,3 +87,5 @@ private:
     std::unique_ptr<VerilatedVcdC>    tfp;
     bool                              wave_on;
 };
+
+} // namespace difftest

@@ -5,8 +5,10 @@ module top (
     // _verilator 仿真参数
 `ifdef VERILATOR 
     input wire clk_i,
-    input wire rst_i
-    
+    input wire rst_i,
+
+    output wire txd_o,                      //直连串口发送端
+    input  wire rxd_i                       //直连串口接收端
     // vivado 仿真参数
 `else
     input wire          clk_50M     ,       //50MHz 时钟输入
@@ -150,8 +152,12 @@ module top (
 `ifndef VERILATOR
     wire   clk_i;
     wire   rst_i;
+    wire   rxd_i;
+    wire   txd_o;
     assign clk_i = clk_50M;
     assign rst_i = reset_btn;
+    assign rxd_i = rxd;
+    assign txd = txd_o;
 
     // 指令 rom 接口
     assign if_inst_c     = base_ram_data;
@@ -395,41 +401,6 @@ module top (
         .d(dm_wdata_c),
         .spo(dm_rdata_c)
     );
-    // async_ram U_bram_inst_1(
-    //     .clk(clk_i),
-    //     .we_n(0), 
-    //     .web_n(0),
-    //     .addr(if_pc_c[19:0]),
-    //     .wdata(0),
-    //     .rdata(if_inst_c[15:0])
-    // );
-
-    // async_ram U_bram_inst_2(
-    //     .clk(clk_i),
-    //     .we_n(0), 
-    //     .web_n(0),
-    //     .addr(if_pc_c[19:0]),
-    //     .wdata(0),
-    //     .rdata(if_inst_c[31:16])
-    // );
-
-    // async_ram U_extram_data_1(
-    //     .clk(clk_i),
-    //     .we_n(dm_rw_c), 
-    //     .web_n(dm_wbe_n_c[1:0]),
-    //     .addr(dm_addr_c[19:0]),
-    //     .wdata(dm_wdata_c[15:0]),
-    //     .rdata(dm_rdata_c[15:0])
-    // );
-
-    // async_ram U_extram_data_2(
-    //     .clk(clk_i),
-    //     .we_n(dm_rw_c), 
-    //     .web_n(dm_wbe_n_c[3:2]),
-    //     .addr(dm_addr_c[19:0]),
-    //     .wdata(dm_wdata_c[31:16]),
-    //     .rdata(dm_rdata_c[31:16])
-    // );
 
 // vivado 仿真模块
 `else
@@ -463,45 +434,50 @@ module top (
     //         // Your Code
     //     end
     // end
-    // sram_model U_irom_1(
-    //     .Address(if_pc_c[21:2]),
-    //     .DataIO(w_rom_data[15:0]),
-    //     .OE_n(0),
-    //     .CE_n(0),
-    //     .WE_n(1),
-    //     .LB_n(0),
-    //     .UB_n(0)
-    // );
 
-    // sram_model U_irom_2(
-    //     .Address(if_pc_c[21:2]),
-    //     .DataIO(w_rom_data[31:16]),
-    //     .OE_n(0),
-    //     .CE_n(0),
-    //     .WE_n(1),
-    //     .LB_n(0),
-    //     .UB_n(0)
-    // );
+    //直连串口接收发送演示，从直连串口收到的数据再发送出去
+    wire [7:0] ext_uart_rx;
+    reg  [7:0] ext_uart_buffer, ext_uart_tx;
+    wire ext_uart_ready, ext_uart_clear, ext_uart_busy;
+    reg ext_uart_start, ext_uart_avai;
+        
+    assign number = ext_uart_buffer;
 
-    // sram_model U_iram_1(
-    //     .Address(dm_addr_c[21:2]),
-    //     .DataIO(w_rom_data[15:0]),
-    //     .OE_n(dm_rw_c),
-    //     .CE_n(0),
-    //     .WE_n(~dm_rw_c),
-    //     .LB_n(dm_wbe_n_c[0]),
-    //     .UB_n(dm_wbe_n_c[1])
-    // );
+    async_receiver #(.ClkFrequency(50000000),.Baud(9600))   //接收模块,9600无检验位
+        ext_uart_r(
+            .clk(clk_50M),                      //外部时钟信号
+            .RxD(rxd_i),                        //外部串行信号输入
+            .RxD_data_ready(ext_uart_ready),    //数据接收到标志
+            .RxD_clear(ext_uart_clear),         //清除接收标志
+            .RxD_data(ext_uart_rx)              //接收到的一字节数据
+        );
 
-    // sram_model U_iram_2(
-    //     .Address(dm_addr_c[21:2]),
-    //     .DataIO(w_rom_data[31:16]),
-    //     .OE_n(dm_rw_c),
-    //     .CE_n(0),
-    //     .WE_n(~dm_rw_c),
-    //     .LB_n(dm_wbe_n_c[2]),
-    //     .UB_n(dm_wbe_n_c[3])
-    // );
+    assign ext_uart_clear = ext_uart_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
+    always @(posedge clk_50M) begin         //接收到缓冲区ext_uart_buffer
+        if(ext_uart_ready)begin
+            ext_uart_buffer <= ext_uart_rx;
+        end else if(!ext_uart_busy && ext_uart_avai)begin 
+            ext_uart_avai <= 0;
+        end
+    end
+    always @(posedge clk_50M) begin         //将缓冲区ext_uart_buffer发送出去
+        if(!ext_uart_busy)begin 
+            ext_uart_tx <= ext_uart_buffer;
+            ext_uart_start <= 1;
+        end else begin 
+            ext_uart_start <= 0;
+        end
+    end
+
+    async_transmitter #(.ClkFrequency(50000000),.Baud(9600)) //发送模块,9600无检验位
+        ext_uart_t(
+            .clk(clk_50M),                      //外部时钟信号
+            .TxD(txd_o),                        //串行信号输出
+            .TxD_busy(ext_uart_busy),           //发送器忙状态指示
+            .TxD_start(ext_uart_start),         //开始发送信号
+            .TxD_data(ext_uart_tx)              //待发送的数据
+        );
+
 `endif
 
     //--------------------------{各模块实例化}end----------------------------//
