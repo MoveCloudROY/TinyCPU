@@ -132,11 +132,11 @@ begin
 end
 
 // and decide when is the good time to sample the RxD line
-function integer log2(input integer v); begin log2=0; while(v>>log2) log2=log2+1; end endfunction
+function integer log2(input integer v); begin log2=0; while((v>>log2) != 0) log2=log2+1; end endfunction
 localparam l2o = log2(Oversampling);
 reg [l2o-2:0] OversamplingCnt = 0;
-always @(posedge clk) if(OversamplingTick) OversamplingCnt <= (RxD_state==0) ? 1'd0 : OversamplingCnt + 1'd1;
-wire sampleNow = OversamplingTick && (OversamplingCnt==Oversampling/2-1);
+always @(posedge clk) if(OversamplingTick) OversamplingCnt <= (RxD_state==0) ? 3'd0 : OversamplingCnt + 1'd1;
+wire sampleNow = OversamplingTick && ({1'b0, OversamplingCnt}==Oversampling/2-1);
 `endif
 
 // now we can accumulate the RxD bits in a shift-register
@@ -196,7 +196,7 @@ parameter ClkFrequency = 25000000;
 parameter Baud = 115200;
 parameter Oversampling = 1;
 
-function integer log2(input integer v); begin log2=0; while(v>>log2) log2=log2+1; end endfunction
+function integer log2(input integer v); begin log2=0; while((v>>log2) != 0) log2=log2+1; end endfunction
 localparam AccWidth = log2(ClkFrequency/Baud)+8;  // +/- 2% max timing error over a byte
 reg [AccWidth:0] Acc = 0;
 localparam ShiftLimiter = log2(Baud*Oversampling >> (31-AccWidth));  // this makes sure Inc calculation doesn't overflow

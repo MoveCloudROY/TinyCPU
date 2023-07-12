@@ -159,27 +159,10 @@ module top (
     assign rxd_i = rxd;
     assign txd = txd_o;
 
-    // 指令 rom 接口
-    assign if_inst_c     = base_ram_data;
-    assign base_ram_addr = if_pc_c[21:2];
-    assign base_ram_be_n = 4'd0;
-    assign base_ram_ce_n = 1'b0;
-    assign base_ram_oe_n = 1'b0;
-    assign base_ram_we_n = 1'b1;
-
-    // 数据 ram 接口
-    assign dm_rdata_c = ext_ram_data;
-    assign ext_ram_data =  dm_we_c ? dm_wdata_c : 32'bz;
-    assign ext_ram_addr =  dm_addr_c[21:2];
-    assign ext_ram_be_n =  dm_wbe_n_c;
-    assign ext_ram_ce_n =  0;
-    assign ext_ram_oe_n =  ~dm_re_c;
-    assign ext_ram_we_n =  ~dm_we_c;
-
     assign leds         = 0;
     assign dpy0         = 0;
     assign dpy1         = 0;
-    assign txd          = 1;
+    // assign txd          = 1;
     assign flash_a      = 0;
     assign flash_d      = 0;
     assign flash_rp_n   = 1;
@@ -389,17 +372,33 @@ module top (
 
 // _verilator 仿真模块
 `ifdef VERILATOR 
+    wire [31:0] irom_wdata;
+    wire [31:0] irom_rdata;
+    wire [19:0] irom_addr;
+    wire [3:0]  irom_be_n;
+    wire irom_ce_n;
+    wire irom_oe_n;
+    wire irom_we_n;
+
+    wire [31:0] dram_wdata;
+    wire [31:0] dram_rdata;
+    wire [19:0] dram_addr;
+    wire [3:0]  dram_be_n;
+    wire dram_ce_n;
+    wire dram_oe_n;
+    wire dram_we_n;
+
     IROM #(.ADDR_BITS(20)) U_irom (
-        .a(if_pc_c[21:2]),
-        .spo(if_inst_c)
+        .a(irom_addr),
+        .spo(irom_rdata)
     );
 
     DRAM #(.ADDR_BITS(20)) U_dram (
         .clk(clk_i),
-        .a(dm_addr_c[21:2]),
-        .we(~dm_wbe_n_c),
-        .d(dm_wdata_c),
-        .spo(dm_rdata_c)
+        .a(dram_addr),
+        .we(~dram_be_n),
+        .d(dram_wdata),
+        .spo(dram_rdata)
     );
 
 // vivado 仿真模块
@@ -434,33 +433,44 @@ module top (
     //         // Your Code
     //     end
     // end
-
+`endif
     //直连串口接收发送演示，从直连串口收到的数据再发送出去
     wire [7:0] ext_uart_rx;
     reg  [7:0] ext_uart_buffer, ext_uart_tx;
     wire ext_uart_ready, ext_uart_clear, ext_uart_busy;
     reg ext_uart_start, ext_uart_avai;
         
-    assign number = ext_uart_buffer;
-
-    async_receiver #(.ClkFrequency(50000000),.Baud(9600))   //接收模块,9600无检验位
+    // assign number = ext_uart_buffer;
+    //接收模块,9600无检验位
+    async_receiver #(.ClkFrequency(50000000),.Baud(9600))   
         ext_uart_r(
-            .clk(clk_50M),                      //外部时钟信号
+            .clk(clk_i),                      //外部时钟信号
             .RxD(rxd_i),                        //外部串行信号输入
             .RxD_data_ready(ext_uart_ready),    //数据接收到标志
             .RxD_clear(ext_uart_clear),         //清除接收标志
             .RxD_data(ext_uart_rx)              //接收到的一字节数据
         );
+    //发送模块,9600无检验位
+    async_transmitter #(.ClkFrequency(50000000),.Baud(9600)) 
+        ext_uart_t(
+            .clk(clk_i),                      //外部时钟信号
+            .TxD(txd_o),                        //串行信号输出
+            .TxD_busy(ext_uart_busy),           //发送器忙状态指示
+            .TxD_start(ext_uart_start),         //开始发送信号
+            .TxD_data(ext_uart_tx)              //待发送的数据
+        );
+
 
     assign ext_uart_clear = ext_uart_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
-    always @(posedge clk_50M) begin         //接收到缓冲区ext_uart_buffer
+    always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
         if(ext_uart_ready)begin
             ext_uart_buffer <= ext_uart_rx;
+            ext_uart_avai <= 1;
         end else if(!ext_uart_busy && ext_uart_avai)begin 
             ext_uart_avai <= 0;
         end
     end
-    always @(posedge clk_50M) begin         //将缓冲区ext_uart_buffer发送出去
+    always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
         if(!ext_uart_busy)begin 
             ext_uart_tx <= ext_uart_buffer;
             ext_uart_start <= 1;
@@ -469,16 +479,118 @@ module top (
         end
     end
 
-    async_transmitter #(.ClkFrequency(50000000),.Baud(9600)) //发送模块,9600无检验位
-        ext_uart_t(
-            .clk(clk_50M),                      //外部时钟信号
-            .TxD(txd_o),                        //串行信号输出
-            .TxD_busy(ext_uart_busy),           //发送器忙状态指示
-            .TxD_start(ext_uart_start),         //开始发送信号
-            .TxD_data(ext_uart_tx)              //待发送的数据
-        );
+    wire [31:0] base_ram_wdata_c;
+    wire [31:0] base_ram_rdata_c;
+    wire [19:0] base_ram_addr_c;
+    wire [3:0]  base_ram_be_n_c;
+    wire base_ram_ce_n_c;
+    wire base_ram_oe_n_c;
+    wire base_ram_we_n_c;
+    wire [31:0] ext_ram_wdata_c ;
+    wire [31:0] ext_ram_rdata_c ;
+    wire [19:0] ext_ram_addr_c ;
+    wire [3:0]  ext_ram_be_n_c ;
+    wire ext_ram_ce_n_c ;
+    wire ext_ram_oe_n_c ;
+    wire ext_ram_we_n_c ;
 
+    wire uart_we_n_c;
+    wire uart_re_n_c;
+    wire [7:0] uart_tx_data_c;
+    wire [7:0] uart_rx_data_c;
+
+`ifdef VERILATOR 
+    assign irom_wdata = base_ram_wdata_c;
+    assign base_ram_rdata_c = irom_rdata;
+    assign irom_addr = base_ram_addr_c;
+    assign irom_be_n = base_ram_be_n_c;
+    assign irom_ce_n = base_ram_ce_n_c;
+    assign irom_oe_n = base_ram_oe_n_c;
+    assign irom_we_n = base_ram_we_n_c;
+    
+    assign dram_wdata  = ext_ram_wdata_c;
+    assign ext_ram_rdata_c = dram_rdata;
+    assign dram_addr  = ext_ram_addr_c ;
+    assign dram_be_n  = ext_ram_be_n_c ;
+    assign dram_ce_n  = ext_ram_ce_n_c ;
+    assign dram_oe_n  = ext_ram_oe_n_c ;
+    assign dram_we_n  = ext_ram_we_n_c ;
+`else
+    assign base_ram_data = ~base_ram_we_n_c ? base_ram_wdata_c : 32'bz;
+    assign base_ram_rdata_c = base_ram_data;
+    assign base_ram_addr = base_ram_addr_c;
+    assign base_ram_be_n = base_ram_be_n_c;
+    assign base_ram_ce_n = base_ram_ce_n_c;
+    assign base_ram_oe_n = base_ram_oe_n_c;
+    assign base_ram_we_n = base_ram_we_n_c;
+    
+    assign ext_ram_data = ~ext_ram_we_n_c ? ext_ram_wdata_c : 32'bz;
+    assign ext_ram_rdata_c = ext_ram_data ;
+    assign ext_ram_addr  = ext_ram_addr_c ;
+    assign ext_ram_be_n  = ext_ram_be_n_c ;
+    assign ext_ram_ce_n  = ext_ram_ce_n_c ;
+    assign ext_ram_oe_n  = ext_ram_oe_n_c ;
+    assign ext_ram_we_n  = ext_ram_we_n_c ;
+    
+    // // 指令 rom 接口
+    // assign if_inst_c     = base_ram_data;
+    // assign base_ram_addr = if_pc_c[21:2];
+    // assign base_ram_be_n = 4'd0;
+    // assign base_ram_ce_n = 1'b0;
+    // assign base_ram_oe_n = 1'b0;
+    // assign base_ram_we_n = 1'b1;
+
+    // // 数据 ram 接口
+    // assign dm_rdata_c = ext_ram_data;
+    // assign ext_ram_data =  dm_we_c ? dm_wdata_c : 32'bz;
+    // assign ext_ram_addr =  dm_addr_c[21:2];
+    // assign ext_ram_be_n =  dm_wbe_n_c;
+    // assign ext_ram_ce_n =  0;
+    // assign ext_ram_oe_n =  ~dm_re_c;
+    // assign ext_ram_we_n =  ~dm_we_c;
 `endif
+    bridge U_bridge(
+        .ifu_wdata_i(0),
+        .ifu_rdata_o(if_inst_c),
+        .ifu_addr_i(if_pc_c),
+        .ifu_be_n_i(4'd0),
+        .ifu_re_n_i(0),
+        .ifu_we_n_i(1),
+        .ifu_req_i(1),
+        .ifu_resp_o(),
+
+        .lsu_wdata_i(dm_wdata_c),
+        .lsu_rdata_o(dm_rdata_c),
+        .lsu_addr_i(dm_addr_c),
+        .lsu_be_n_i(dm_wbe_n_c),
+        .lsu_re_n_i(~dm_re_c),
+        .lsu_we_n_i(~dm_we_c),
+        .lsu_req_i(dm_we_c | dm_re_c),
+        .lsu_resp_o(),
+
+        .base_ram_wdata(base_ram_wdata_c),
+        .base_ram_rdata(base_ram_rdata_c),
+        .base_ram_addr(base_ram_addr_c),
+        .base_ram_be_n(base_ram_be_n_c),
+        .base_ram_ce_n(base_ram_ce_n_c),
+        .base_ram_oe_n(base_ram_oe_n_c),
+        .base_ram_we_n(base_ram_we_n_c),
+
+        .ext_ram_wdata(ext_ram_wdata_c),
+        .ext_ram_rdata(ext_ram_rdata_c),
+        .ext_ram_addr (ext_ram_addr_c),
+        .ext_ram_be_n (ext_ram_be_n_c),
+        .ext_ram_ce_n (ext_ram_ce_n_c),
+        .ext_ram_oe_n (ext_ram_oe_n_c),
+        .ext_ram_we_n (ext_ram_we_n_c),
+
+        .uart_we_n_o    (uart_we_n_c),
+        .uart_re_n_o    (uart_re_n_c),
+        .uart_tx_data_o (uart_tx_data_c),
+        .uart_rx_data_i (uart_rx_data_c)
+    );
+
+
 
     //--------------------------{各模块实例化}end----------------------------//
 
