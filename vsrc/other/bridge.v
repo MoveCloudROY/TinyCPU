@@ -37,10 +37,13 @@ module bridge (
     output wire         ext_ram_oe_n ,      //ExtRAM读使能，低有效
     output wire         ext_ram_we_n ,      //ExtRAM写使能，低有效
 
+    input  wire         uart_tx_ready,
+    input  wire         uart_rx_ready,
     output wire         uart_we_n_o,
     output wire         uart_re_n_o,
     output wire[7:0]    uart_tx_data_o,  //直连串口发送端
     input  wire[7:0]    uart_rx_data_i  //直连串口接收端
+
 );
 // 虚拟内存空间为0x8000_0000～0x807F_FFFF，共8MB，要求整个内存空间均可读可写可执行。其中
 // 0x8000_0000～0x803F_FFFF映射到BaseRAM；
@@ -53,6 +56,9 @@ module bridge (
 // Ext : 0b1000'0000'01 ~ 0b1000'0000'01
 // UART: 0b1011'1111'11 01 0
 
+// 0xbfd003f8 DATA
+// 0xbfd003fC  [0] 1 表示串口发送空闲
+//             [1] 1 表示串口收到数据
 
     /*==================================================*/
     //                    Arbiter
@@ -101,8 +107,10 @@ module bridge (
 
     assign lsu_rdata_o = lsu_base_valid ? base_ram_rdata
                         : lsu_ext_valid ? ext_ram_rdata
-                        : lsu_uart_valid ? {24'd0, uart_rx_data_i} 
-                        : 32'hdeadbeef; 
+                        : lsu_uart_valid & (lsu_addr_i[3:0] == 4'h8) ? {24'd0, uart_rx_data_i}
+                        : lsu_uart_valid & (lsu_addr_i[3:0] == 4'hc) ? {30'd0, uart_rx_ready, uart_tx_ready}
+                        : 32'hdeadbeef;
+
     assign ifu_rdata_o = ifu_base_valid ? base_ram_rdata
                         : 32'hdeadbeef; 
 

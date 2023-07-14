@@ -25,6 +25,8 @@
 #include <csignal>
 
 // 参考实现缓冲队列
+constexpr const size_t Q_SIZE = 8;
+
 std::queue<Status> inst_done_q;
 std::queue<Status> inst_ref_q;
 
@@ -71,8 +73,6 @@ int main(int argc, char **argv) {
 
         //考虑有效性，当 PC 发生变更，则有效
         if (lastPcStatus.pc != nowPc) {
-            if (lastPcStatus.pc == 0x68)
-                break;
             StayCnt = 0;
             // 将上一个 pc状态压入
             inst_done_q.push(lastPcStatus);
@@ -85,24 +85,32 @@ int main(int argc, char **argv) {
             inst_ref_q.push(cpuRefStatus);
 
             // 状态队列维护
-            if (inst_done_q.size() > 5)
+            if (inst_done_q.size() > Q_SIZE)
                 inst_done_q.pop();
-            if (inst_ref_q.size() > 5)
+            if (inst_ref_q.size() > Q_SIZE)
                 inst_ref_q.pop();
-            debug("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
-            debug("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
-            debug("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
-            debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
+            // debug("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
+            // debug("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
+            // debug("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
+            // debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
             if (!compare_status(lastPcStatus, cpuRefStatus)) {
+                // for (int k = 0; k < 10; ++k)
+                //     cpu.step();
                 // 错误时，打印出历史记录
-                std::cout << "\n\n" CTL_ORIANGE "History:" CTL_RESET "\n";
+                std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
                 while (!inst_done_q.empty()) {
                     auto s = inst_done_q.front();
                     inst_done_q.pop();
                     debug("pc = 0x%08X", s.pc);
+                    print_d(CTL_PUP, "Prac CPU");
                     print_gpr(s.gpr);
+                    print_d(CTL_RESET, "--------------------------------------");
+                    auto s_ref = inst_ref_q.front();
+                    inst_ref_q.pop();
+                    print_d(CTL_PUP, "Ref CPU");
+                    print_gpr(s_ref.gpr);
                 }
                 break;
             }

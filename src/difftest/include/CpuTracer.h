@@ -1,5 +1,6 @@
 #pragma once
 
+#include <device/uartsim.hpp>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -74,6 +75,7 @@ public:
         }
 
         top->rst_i = 0;
+        // top->rxd_i = 1;
         printf("[mycpu] Reset done.\n");
     }
 
@@ -82,10 +84,12 @@ public:
     }
 
 private:
+    uartsim                           uart;
     std::unique_ptr<VerilatedContext> context;
     T                                *top;
     std::unique_ptr<VerilatedVcdC>    tfp;
-    bool                              wave_on;
+
+    bool wave_on;
 };
 
 } // namespace difftest

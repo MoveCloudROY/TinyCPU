@@ -445,8 +445,8 @@ module top (
     reg [7:0] ext_uart_rxbuf;
     wire[7:0] ext_uart_rx;
     reg [7:0] ext_uart_tx;
-    wire ext_uart_ready, ext_uart_clear, ext_uart_busy;
-    reg ext_uart_start, ext_uart_avai;
+    wire ext_uart_rx_ready, ext_uart_rx_clear, ext_uart_tx_busy;
+    reg ext_uart_tx_start, ext_uart_avai;
     wire [7:0] ext_uart_txbuf_c;
     wire [7:0] ext_uart_rxbuf_c;
 
@@ -457,37 +457,38 @@ module top (
         ext_uart_r(
             .clk(clk_i),                      //外部时钟信号
             .RxD(rxd_i),                        //外部串行信号输入
-            .RxD_data_ready(ext_uart_ready),    //数据接收到标志
-            .RxD_clear(ext_uart_clear),         //清除接收标志
+            .RxD_data_ready(ext_uart_rx_ready),    //数据接收到标志
+            .RxD_clear(ext_uart_rx_clear),         //清除接收标志
             .RxD_data(ext_uart_rx)              //接收到的一字节数据
         );
     //发送模块,9600无检验位
     async_transmitter #(.ClkFrequency(50000000),.Baud(9600)) 
         ext_uart_t(
             .clk(clk_i),                      //外部时钟信号
+            .TxD_start(ext_uart_tx_start),         //开始发送信号
+            .TxD_data(ext_uart_tx),              //待发送的数据
+
             .TxD(txd_o),                        //串行信号输出
-            .TxD_busy(ext_uart_busy),           //发送器忙状态指示
-            .TxD_start(ext_uart_start),         //开始发送信号
-            .TxD_data(ext_uart_tx)              //待发送的数据
+            .TxD_busy(ext_uart_tx_busy)           //发送器忙状态指示
         );
 
 
-    assign ext_uart_clear = ext_uart_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
+    assign ext_uart_rx_clear = ext_uart_rx_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
     always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
-        if(ext_uart_ready) begin
+        if(ext_uart_rx_ready & !uart_re_n_c) begin
             ext_uart_rxbuf <= ext_uart_rx;
             ext_uart_avai <= 1;
-        end else if(!ext_uart_busy && ext_uart_avai) begin 
+        end else if(!ext_uart_tx_busy && ext_uart_avai) begin 
             ext_uart_avai <= 0;
         end
     end
 
     always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
-        if(!ext_uart_busy) begin 
+        if(!ext_uart_tx_busy & !uart_we_n_c) begin 
             ext_uart_tx <= ext_uart_txbuf_c;
-            ext_uart_start <= 1;
+            ext_uart_tx_start <= 1;
         end else begin 
-            ext_uart_start <= 0;
+            ext_uart_tx_start <= 0;
         end
     end
 
@@ -597,6 +598,8 @@ module top (
         .ext_ram_oe_n (ext_ram_oe_n_c),
         .ext_ram_we_n (ext_ram_we_n_c),
 
+        .uart_tx_ready  (~ext_uart_tx_busy),
+        .uart_rx_ready  (ext_uart_rx_ready),
         .uart_we_n_o    (uart_we_n_c),
         .uart_re_n_o    (uart_re_n_c),
         .uart_tx_data_o (ext_uart_txbuf_c),
