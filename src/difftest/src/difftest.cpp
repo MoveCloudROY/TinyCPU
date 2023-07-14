@@ -10,6 +10,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <iomanip>
 #include <ios>
 #include <ratio>
@@ -21,6 +22,7 @@
 #include <algorithm>
 #include <functional>
 #include <type_traits>
+#include <csignal>
 
 // 参考实现缓冲队列
 std::queue<Status> inst_done_q;
@@ -28,6 +30,8 @@ std::queue<Status> inst_ref_q;
 
 
 int main(int argc, char **argv) {
+    // freopen("trace.txt", "w", stdout);
+
     // 性能计数器
     difftest::PerfTracer perfTracer;
     // 初始化 CPU
@@ -44,6 +48,11 @@ int main(int argc, char **argv) {
     size_t   StayCnt = 0;
 
     while (running) {
+        // Main thread input handling
+        // std::unique_lock<std::mutex> lock(cpuRef.mtx);
+        // cpuRef.cv.wait(lock); // Wait for notification from the UART input thread
+        // Continue with main thread logic here
+
 
         // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
         cpu.step();
@@ -62,6 +71,8 @@ int main(int argc, char **argv) {
 
         //考虑有效性，当 PC 发生变更，则有效
         if (lastPcStatus.pc != nowPc) {
+            if (lastPcStatus.pc == 0x68)
+                break;
             StayCnt = 0;
             // 将上一个 pc状态压入
             inst_done_q.push(lastPcStatus);
@@ -78,6 +89,10 @@ int main(int argc, char **argv) {
                 inst_done_q.pop();
             if (inst_ref_q.size() > 5)
                 inst_ref_q.pop();
+            debug("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
+            debug("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
+            debug("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
+            debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
             if (!compare_status(lastPcStatus, cpuRefStatus)) {
@@ -94,7 +109,8 @@ int main(int argc, char **argv) {
         } else {
             ++StayCnt;
         }
-        lastPc  = nowPc;
+        lastPc = nowPc;
+
         running = !cpuRef.is_finished();
 
         if (StayCnt >= 10) {

@@ -4,17 +4,20 @@
 #include <cstdint>
 #include <string>
 #include <device/nscscc_confreg.hpp>
-#include <device/uart8250.hpp>
+#include <device/uartsim.hpp>
 #include <memory/memory_bus.hpp>
 #include <memory/ram.hpp>
 #include <core/la32r/la32r_core.hpp>
-
+#include <thread>
+#include <condition_variable>
+#include <csignal>
 
 namespace difftest {
 
 class CpuRefImpl {
 public:
     CpuRefImpl(std::string path, size_t start_addr = 0, bool device_sim = true, bool trace = true);
+    ~CpuRefImpl();
 
     void operator+=(int step);
 
@@ -36,6 +39,12 @@ public:
     memory_bus     mmio;
     nscscc_confreg confreg;
     la32r_core<32> core;
+    uartsim        uart;
+
+    std::mutex              mtx;
+    std::condition_variable cv;
+    std::thread             uart_input_thread;
+
 
     ram func_mem{1024 * 1024};
     ram data_mem0{0x1000000};

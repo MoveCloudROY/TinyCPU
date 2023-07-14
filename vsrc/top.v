@@ -66,6 +66,12 @@ module top (
 );
 
     /*==================================================*/
+    //                    总线仲裁信号
+    /*==================================================*/
+    wire ifu_resp_c;
+    wire lsu_resp_c;
+
+    /*==================================================*/
     //                 流水控制信号定义部分
     /*==================================================*/
 
@@ -98,10 +104,10 @@ module top (
     assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
-    assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in;
+    assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
-    assign ctl_mem_allow_in = ~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in );
+    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in )) & lsu_resp_c;
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
 
 
@@ -250,6 +256,7 @@ module top (
         .if_inst_i(if_inst_c),
         .if2id_bus_ro(if2id_bus_r),
 
+        .ctl_baseram_hazard(~ifu_resp_c),
         .ctl_jbr_taken_i(ctl_jbr_taken),
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_allow_in_i(ctl_id_allow_in)
@@ -435,11 +442,15 @@ module top (
     // end
 `endif
     //直连串口接收发送演示，从直连串口收到的数据再发送出去
-    wire [7:0] ext_uart_rx;
-    reg  [7:0] ext_uart_buffer, ext_uart_tx;
+    reg [7:0] ext_uart_rxbuf;
+    wire[7:0] ext_uart_rx;
+    reg [7:0] ext_uart_tx;
     wire ext_uart_ready, ext_uart_clear, ext_uart_busy;
     reg ext_uart_start, ext_uart_avai;
-        
+    wire [7:0] ext_uart_txbuf_c;
+    wire [7:0] ext_uart_rxbuf_c;
+
+    
     // assign number = ext_uart_buffer;
     //接收模块,9600无检验位
     async_receiver #(.ClkFrequency(50000000),.Baud(9600))   
@@ -463,16 +474,17 @@ module top (
 
     assign ext_uart_clear = ext_uart_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
     always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
-        if(ext_uart_ready)begin
-            ext_uart_buffer <= ext_uart_rx;
+        if(ext_uart_ready) begin
+            ext_uart_rxbuf <= ext_uart_rx;
             ext_uart_avai <= 1;
-        end else if(!ext_uart_busy && ext_uart_avai)begin 
+        end else if(!ext_uart_busy && ext_uart_avai) begin 
             ext_uart_avai <= 0;
         end
     end
+
     always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
-        if(!ext_uart_busy)begin 
-            ext_uart_tx <= ext_uart_buffer;
+        if(!ext_uart_busy) begin 
+            ext_uart_tx <= ext_uart_txbuf_c;
             ext_uart_start <= 1;
         end else begin 
             ext_uart_start <= 0;
@@ -496,8 +508,9 @@ module top (
 
     wire uart_we_n_c;
     wire uart_re_n_c;
-    wire [7:0] uart_tx_data_c;
-    wire [7:0] uart_rx_data_c;
+
+
+    assign ext_uart_rxbuf_c = ext_uart_rxbuf;
 
 `ifdef VERILATOR 
     assign irom_wdata = base_ram_wdata_c;
@@ -557,7 +570,7 @@ module top (
         .ifu_re_n_i(0),
         .ifu_we_n_i(1),
         .ifu_req_i(1),
-        .ifu_resp_o(),
+        .ifu_resp_o(ifu_resp_c),
 
         .lsu_wdata_i(dm_wdata_c),
         .lsu_rdata_o(dm_rdata_c),
@@ -566,7 +579,7 @@ module top (
         .lsu_re_n_i(~dm_re_c),
         .lsu_we_n_i(~dm_we_c),
         .lsu_req_i(dm_we_c | dm_re_c),
-        .lsu_resp_o(),
+        .lsu_resp_o(lsu_resp_c),
 
         .base_ram_wdata(base_ram_wdata_c),
         .base_ram_rdata(base_ram_rdata_c),
@@ -586,8 +599,8 @@ module top (
 
         .uart_we_n_o    (uart_we_n_c),
         .uart_re_n_o    (uart_re_n_c),
-        .uart_tx_data_o (uart_tx_data_c),
-        .uart_rx_data_i (uart_rx_data_c)
+        .uart_tx_data_o (ext_uart_txbuf_c),
+        .uart_rx_data_i (ext_uart_rxbuf_c)
     );
 
 

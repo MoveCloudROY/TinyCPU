@@ -46,7 +46,7 @@ module bridge (
 // 0x8000_0000～0x803F_FFFF映射到BaseRAM；
 // 0x8040_0000～0x807F_FFFF映射到ExtRAM。
 // CPU复位后从0x80000000开始取指令执行。
-// 猜测 UART 0xbfd0_0000
+// 猜测 UART 0xbfd0_0xxx
 //      [31:22]                      + [21:2] + [1:0]
 //      [31:28] + [27:24] + [23:22]
 // Base: 0b1000'0000'00 ~ 0b1000'0000'00
@@ -72,17 +72,17 @@ module bridge (
     assign lsu_tar_ext  = (lsu_addr_i[31:22] == 0'b1000000001) & lsu_req_i;
     assign lsu_tar_uart = (lsu_addr_i[31:22] == 0'b1011111111) & lsu_req_i;
 `endif
-    assign ifu_resp_o = ifu_tar_base & ~lsu_tar_base & (
+    assign ifu_resp_o = ~ifu_req_i | (ifu_tar_base & ~lsu_tar_base & (
             ( ~lsu_tar_ext  & ~lsu_tar_uart & ~lsu_req_i )
         |   (  lsu_tar_ext  & ~lsu_tar_uart &  lsu_req_i )
         |   ( ~lsu_tar_ext  &  lsu_tar_uart &  lsu_req_i )
-    );
+    ));
 
-    assign lsu_resp_o = ifu_tar_base & lsu_req_i & (
+    assign lsu_resp_o = ~lsu_req_i | (ifu_tar_base & lsu_req_i & (
             (  lsu_tar_base & ~lsu_tar_ext  & ~lsu_tar_uart )
         |   ( ~lsu_tar_base &  lsu_tar_ext  & ~lsu_tar_uart )
         |   ( ~lsu_tar_base & ~lsu_tar_ext  &  lsu_tar_uart )
-    );
+    ));
 
     /*==================================================*/
     //                      Xbar
@@ -126,8 +126,8 @@ module bridge (
 
     assign uart_tx_data_o = lsu_uart_valid & ~lsu_we_n_i? lsu_wdata_i[7:0]
                         : 8'hcc;
-    assign uart_we_n_o = lsu_uart_valid ? lsu_we_n_i : 0;
-    assign uart_re_n_o = lsu_uart_valid ? lsu_re_n_i : 0;
+    assign uart_we_n_o = lsu_uart_valid ? lsu_we_n_i : 1;
+    assign uart_re_n_o = lsu_uart_valid ? lsu_re_n_i : 1;
 
 
 endmodule
