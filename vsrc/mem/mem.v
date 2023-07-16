@@ -46,6 +46,11 @@ module mem(
     /*==================================================*/
     //                 load/store访存
     /*==================================================*/
+    /*
+        TODO: 
+        自然对齐是指,访问半字对象时地址是 2 字节边界对齐,
+        访问字对象时地址是 4 字节边界对齐,访问双字对象时地址是 8 字节边界对齐...
+    */
 
     wire        inst_load;      // load操作
     wire        inst_store;     // store操作
@@ -65,9 +70,21 @@ module mem(
     begin
         if (ctl_mem_valid_i && (inst_store || inst_load)) // 访存级有效时,才可以进行 load/store 操作
         begin
-            case (ld_st_size)
-                3'b100  : dm_wbe_n_o = 4'b1110;
-                3'b010  : dm_wbe_n_o = 4'b1100;
+            case (ld_st_size )
+                3'b100  : begin
+                    case(exe_result[1:0])
+                        2'b00: dm_wbe_n_o = 4'b1110;
+                        2'b01: dm_wbe_n_o = 4'b1101;
+                        2'b10: dm_wbe_n_o = 4'b1011;
+                        2'b11: dm_wbe_n_o = 4'b0111;
+                    endcase
+                end
+                3'b010  : begin
+                    case(exe_result[1])
+                        1'b0: dm_wbe_n_o = 4'b1100;
+                        1'b1: dm_wbe_n_o = 4'b0011;
+                    endcase
+                end
                 3'b001  : dm_wbe_n_o = 4'b0000; 
                 default : dm_wbe_n_o = 4'b1111;
             endcase
@@ -87,11 +104,20 @@ module mem(
     // load读出的数据
     wire        load_sign;
     wire [31:0] load_result;
-    assign load_sign =  (ld_st_size == 3'd4 ) ? dm_rdata_i[ 7] :
-                        (ld_st_size == 3'd2 ) ? dm_rdata_i[15] : dm_rdata_i[31] ;
 
-    assign load_result =    (ld_st_size == 3'd4 ) ? {{24{ld_bh_sign & load_sign}}, dm_rdata_i[7:0]}  :
-                            (ld_st_size == 3'd2 ) ? {{16{ld_bh_sign & load_sign}}, dm_rdata_i[15:0]} :
+    wire [7:0] cat8_result =    (exe_result[1:0] == 2'd0) ? dm_rdata_i[ 7:0] :
+                                (exe_result[1:0] == 2'd1) ? dm_rdata_i[15:8] : 
+                                (exe_result[1:0] == 2'd2) ? dm_rdata_i[23:16] : 
+                                dm_rdata_i[31:24];
+
+    wire [15:0] cat16_result =   (exe_result[1] == 1'b0) ? dm_rdata_i[15:0] :
+                                dm_rdata_i[31:16];
+
+    assign load_sign =  (ld_st_size == 3'd4 ) ? cat8_result[7] :
+                        (ld_st_size == 3'd2 ) ? cat16_result[15] : dm_rdata_i[31] ;
+
+    assign load_result =    (ld_st_size == 3'd4 ) ? {{24{ld_bh_sign & load_sign}}, cat8_result}  :
+                            (ld_st_size == 3'd2 ) ? {{16{ld_bh_sign & load_sign}}, cat16_result} :
                             dm_rdata_i[31:0];
 
 
@@ -104,7 +130,8 @@ module mem(
     assign mem2wb_bus_o = {
         wb_wdest,wb_we,    // WB需要使用的信号
         mem_result,         // 最终要写回寄存器的数据
-        pc                  // PC值
+        dm_addr_o,          // 指令目标地址，DEBUG
+        pc                  // PC值， DEBUG
     };                               
 
     /*==================================================*/

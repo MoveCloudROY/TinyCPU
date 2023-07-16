@@ -88,6 +88,7 @@ module top (
     wire ctl_mem_over;
     wire ctl_wb_over;
     // 5模块允许下一级指令进入
+    wire ctl_if_allow_nxt_pc;
     wire ctl_if_allow_in;
     wire ctl_id_allow_in;
     wire ctl_ex_allow_in;
@@ -104,10 +105,11 @@ module top (
     assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
+    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_jbr_taken);
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
-    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in )) & lsu_resp_c;
+    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in & lsu_resp_c)) ;
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
 
 
@@ -246,7 +248,7 @@ module top (
 
         .ctl_if_valid_i(ctl_if_valid),
         .ctl_if_over_o(ctl_if_over),
-        .ctl_if_allow_in_i(ctl_if_allow_in)
+        .ctl_if_allow_nxt_pc_i(ctl_if_allow_nxt_pc)
     );
 
     if_id U_if2id(

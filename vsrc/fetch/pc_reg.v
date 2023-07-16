@@ -5,7 +5,7 @@ module pc_reg(
     input rst_i,
     input [32:0] jbr_bus_i,   // 跳转总线
 
-    input ctl_if_allow_in_i,
+    input ctl_if_allow_nxt_pc_i,
     input ctl_if_valid_i,
     output ctl_if_over_o,
 
@@ -31,7 +31,7 @@ module pc_reg(
     always @(posedge clk_i) begin
         if(rst_i) begin
             pc <= `LOONG_PC_START_ADDR - 4;
-        end else if (ctl_if_allow_in_i) begin
+        end else if (ctl_if_allow_nxt_pc_i) begin
             pc <= next_pc;
         end
     end

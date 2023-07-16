@@ -25,11 +25,19 @@
 #include <csignal>
 
 // 参考实现缓冲队列
-constexpr const size_t Q_SIZE = 8;
+constexpr const size_t Q_SIZE = 10;
 
 std::queue<Status> inst_done_q;
 std::queue<Status> inst_ref_q;
 
+constexpr const uint32_t UART_DATA_ADDR = 0xbfd003f8;
+constexpr const uint32_t UART_CTL_ADDR  = 0xbfd003fC;
+
+struct CpuStatus {
+    uint32_t pc;
+    uint32_t targetAddr;
+    uint32_t uartTxBusy;
+};
 
 int main(int argc, char **argv) {
     // freopen("trace.txt", "w", stdout);
@@ -39,15 +47,25 @@ int main(int argc, char **argv) {
     // 初始化 CPU
     srand(time(0));
     difftest::CpuTracer<Vtop> cpu{argc, argv};
+
+    CpuStatus lastCpuStatus{};
+    CpuStatus nowCpuStatus{};
+    cpu.register_beforeCallback([&]() {
+        lastCpuStatus = {cpu->rootp->top__DOT__mem2wb_bus_r[0], cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr, cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy};
+    });
+    cpu.register_afterCallback([&]() {
+        nowCpuStatus = {cpu->rootp->top__DOT__mem2wb_bus_r[0], cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr, cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy};
+    });
+
     cpu.enable_trace("top.vcd");
     cpu.reset_all();
 
     // 初始化参考实现
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, 0, true, false};
 
-    bool     running = true;
-    uint32_t lastPc  = 0;
-    size_t   StayCnt = 0;
+    bool   running = true;
+    size_t StayCnt = 0;
+
 
     while (running) {
         // Main thread input handling
@@ -58,8 +76,39 @@ int main(int argc, char **argv) {
 
         // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
         cpu.step();
-        uint32_t nowPc = cpu->rootp->top__DOT__mem2wb_bus_r[0];
-        // debug("nowPc = 0x%08X", nowPc);
+
+        bool waitingUartTx = lastCpuStatus.uartTxBusy && (nowCpuStatus.targetAddr == UART_CTL_ADDR);
+        // print_d(CTL_LIGHTBLUE, "PracPc: 0x%08X   RefPc: 0x%08X", lastCpuStatus.pc, cpuRef.get_pc());
+        /*
+            串口等待处理:
+                1. 检测是否进入串口发送完毕等待循环，判断当前访问地址为 UART_CTL_ADDR & uart_tx_busy
+                2. 等待串口发送完毕
+                3. 同步 Prac CPU和 Ref CPU
+        */
+        if (waitingUartTx) {
+            // Ref CPU 进行取串口数据指令
+            cpuRef.step();
+            print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", lastCpuStatus.pc, cpuRef.get_pc());
+            // 等待数据读取完成，并执行完当前指令
+            while (lastCpuStatus.uartTxBusy || lastCpuStatus.pc == nowCpuStatus.pc) {
+                cpu.step();
+
+                waitingUartTx = lastCpuStatus.uartTxBusy && (nowCpuStatus.targetAddr == UART_CTL_ADDR);
+
+                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", lastCpuStatus.pc, cpuRef.get_pc());
+                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- lastPc: 0x%08X   nowPc: 0x%08X", lastCpuStatus.pc, nowCpuStatus.pc);
+            }
+
+            cpu.step();
+            waitingUartTx = lastCpuStatus.uartTxBusy && (nowCpuStatus.targetAddr == UART_CTL_ADDR);
+
+            while (lastCpuStatus.pc != cpuRef.get_pc()) {
+                cpu.step();
+                waitingUartTx = lastCpuStatus.uartTxBusy && (nowCpuStatus.targetAddr == UART_CTL_ADDR);
+                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", lastCpuStatus.pc, cpuRef.get_pc());
+            }
+        }
+
         std::array<uint32_t, 32> gpr;
         std::copy(
             std::begin(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
@@ -67,12 +116,12 @@ int main(int argc, char **argv) {
             gpr.begin()
         );
 
-        auto lastPcStatus = Status{lastPc, gpr};
+        auto lastPcStatus = Status{lastCpuStatus.pc, gpr};
 
-        perfTracer.tick(lastPcStatus.pc != nowPc);
+        perfTracer.tick(lastPcStatus.pc != nowCpuStatus.pc);
 
         //考虑有效性，当 PC 发生变更，则有效
-        if (lastPcStatus.pc != nowPc) {
+        if (lastPcStatus.pc != nowCpuStatus.pc) {
             StayCnt = 0;
             // 将上一个 pc状态压入
             inst_done_q.push(lastPcStatus);
@@ -101,15 +150,17 @@ int main(int argc, char **argv) {
                 // 错误时，打印出历史记录
                 std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
                 while (!inst_done_q.empty()) {
+                    debug("===============================");
                     auto s = inst_done_q.front();
                     inst_done_q.pop();
-                    debug("pc = 0x%08X", s.pc);
-                    print_d(CTL_PUP, "Prac CPU");
+                    print_d(CTL_PUP, "[Prac CPU]");
+                    print_d(CTL_PUP, "PC: 0x%08X", s.pc);
                     print_gpr(s.gpr);
                     print_d(CTL_RESET, "--------------------------------------");
                     auto s_ref = inst_ref_q.front();
                     inst_ref_q.pop();
-                    print_d(CTL_PUP, "Ref CPU");
+                    print_d(CTL_PUP, "[Ref CPU]");
+                    print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
                     print_gpr(s_ref.gpr);
                 }
                 break;
@@ -117,7 +168,6 @@ int main(int argc, char **argv) {
         } else {
             ++StayCnt;
         }
-        lastPc = nowPc;
 
         running = !cpuRef.is_finished();
 

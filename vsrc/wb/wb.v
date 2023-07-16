@@ -1,5 +1,6 @@
 `include "common.vh"
 
+
 module wb(
     
     output [  4:0] rf_wdest_o,     // 寄存器写地址
@@ -24,7 +25,8 @@ module wb(
     //寄存器堆写使能和写地址
     wire [4:0] wb_wdest;
     wire wb_we;
-    
+
+    wire [`RegW - 1:0] dbg_dm_addr /* verilator public_flat */; 
     
     //pc
     wire [31:0] pc;    
@@ -32,6 +34,7 @@ module wb(
         wb_wdest,
         wb_we,
         mem_result,
+        dbg_dm_addr,
         pc } = mem2wb_bus_ri;
         
 

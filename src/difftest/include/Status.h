@@ -1,4 +1,5 @@
 #pragma once
+
 #include "tools.h"
 
 #include <array>
@@ -12,6 +13,7 @@ struct Status {
     uint32_t                 pc;
     std::array<uint32_t, 32> gpr;
 };
+
 
 inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
     std::stringstream pracStr, refStr;
@@ -34,9 +36,9 @@ inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
         pracStr << CTL_RESET << "[PC] 0x" << std::hex << pracImpl.pc << CTL_RESET << '\n';
         refStr << CTL_RESET << "[PC] 0x" << std::hex << refImpl.pc << CTL_RESET << '\n';
     }
-    for (size_t i = 0; i < 4; ++i) {
-        for (size_t j = 0; j < 8; ++j) {
-            auto ind = i * 8 + j;
+    for (size_t i = 0; i < 8; ++i) {
+        for (size_t j = 0; j < 4; ++j) {
+            auto ind = i * 4 + j;
             if (pracImpl.gpr[ind] != refImpl.gpr[ind]) {
                 pracStr << CTL_RED << std::dec << "GPR[" << std::setw(2) << ind << "]: 0x" << std::hex << std::setw(8) << std::setfill('0') << pracImpl.gpr[ind] << CTL_RESET << "   ";
                 refStr << CTL_GREEN << std::dec << "GPR[" << std::setw(2) << ind << "]: 0x" << std::hex << std::setw(8) << std::setfill('0') << refImpl.gpr[ind] << CTL_RESET << "   ";

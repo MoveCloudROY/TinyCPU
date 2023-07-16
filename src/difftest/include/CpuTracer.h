@@ -1,11 +1,14 @@
 #pragma once
 
+#include <cstdio>
 #include <device/uartsim.hpp>
 #include <cstddef>
 #include <memory>
 #include <string>
 #include "verilated.h"
 #include "verilated_vcd_c.h"
+#include "Status.h"
+
 
 namespace difftest {
 
@@ -13,7 +16,9 @@ template <typename T>
 class CpuTracer {
 public:
     CpuTracer(int argc, char **argv)
-        : context{std::make_unique<VerilatedContext>()} {
+        : context{std::make_unique<VerilatedContext>()}
+        , beforeCallback{[]() {}}
+        , afterCallback{[]() {}} {
         context->commandArgs(argc, argv);
         top = new T{context.get()};
     }
@@ -40,8 +45,8 @@ public:
             tfp->flush();
         }
     }
-
     void step() {
+        beforeCallback();
         context->timeInc(1);
         top->clk_i = 0;
         top->eval();
@@ -64,6 +69,7 @@ public:
         //     tfp->dump(context->time());
         //     tfp->flush();
         // }
+        afterCallback();
     }
 
     void reset_all() {
@@ -79,17 +85,28 @@ public:
         printf("[mycpu] Reset done.\n");
     }
 
+    void register_beforeCallback(std::function<void(void)> beforeCallback_t) {
+        beforeCallback = beforeCallback_t;
+    }
+    void register_afterCallback(std::function<void(void)> afterCallback_t) {
+        afterCallback = afterCallback_t;
+    }
+
     T *operator->() {
         return top;
     }
 
+public:
+    uartsim uart;
+    Status  lastStatus;
+
 private:
-    uartsim                           uart;
     std::unique_ptr<VerilatedContext> context;
     T                                *top;
     std::unique_ptr<VerilatedVcdC>    tfp;
-
-    bool wave_on;
+    std::function<void(void)>         beforeCallback;
+    std::function<void(void)>         afterCallback;
+    bool                              wave_on;
 };
 
 } // namespace difftest

@@ -27,9 +27,12 @@ module if_id(
         if (rst_i) begin
             if2id_bus_ro <= {32'd0, 32'd0};
             if_prepc <= 32'd0;
-        end else if (ctl_jbr_taken_i || ctl_baseram_hazard) begin
+        end else if (ctl_jbr_taken_i) begin
             if2id_bus_ro <= {if_prepc, 10'b0000001101, 22'd0};
-        end else if(ctl_if_over_i && ctl_id_allow_in_i) begin
+        end else if (ctl_baseram_hazard) begin
+            if2id_bus_ro <= if2id_bus_ro;
+            // if_prepc <= if_pc_i;
+        end else if(ctl_if_over_i && ctl_id_allow_in_i && ~ctl_baseram_hazard) begin
             // 向 ID 传递 PC INST
             if2id_bus_ro <= {if_pc_i, if_inst_i};
             if_prepc <= if_pc_i;
