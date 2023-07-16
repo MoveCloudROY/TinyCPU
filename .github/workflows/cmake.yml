@@ -20,6 +20,11 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
+    - uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: cmake ninja-build git perl python3 make autoconf g++ flex bison ccache libgoogle-perftools-dev numactl libfl2 libfl-dev zlibc zlib1g zlib1g-dev
+        version: 1.0
+
     - name: env
       # Set the Project Env Packages
       run: |

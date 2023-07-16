@@ -1,3 +1,6 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
 #include "PerfTracer.h"
@@ -8,6 +11,8 @@
 #include "tools.h"
 
 #include <array>
+#include <bits/chrono.h>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -39,7 +44,7 @@ struct CpuStatus {
     uint32_t uartTxBusy;
 };
 
-int main(int argc, char **argv) {
+int test_main(int argc, char **argv) {
     // freopen("trace.txt", "w", stdout);
 
     // 性能计数器
@@ -66,6 +71,7 @@ int main(int argc, char **argv) {
     bool   running = true;
     size_t StayCnt = 0;
 
+    auto startTime = std::chrono::high_resolution_clock::now();
 
     while (running) {
         // Main thread input handling
@@ -163,6 +169,7 @@ int main(int argc, char **argv) {
                     print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
                     print_gpr(s_ref.gpr);
                 }
+                return 1;
                 break;
             }
         } else {
@@ -174,11 +181,24 @@ int main(int argc, char **argv) {
         if (StayCnt >= 10) {
             print_info("Pass the DiffTest!");
             perfTracer.print();
+            return 0;
             break;
+        }
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto during  = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+        if (during > 10) {
+            print_err("CPU emulation timeout!");
+            return 1;
         }
     }
 
-
+    return 0;
     // std::cout << "=====================" << std::endl;
     // std::cout << "Totally Step: " << stepCnt << std::endl;
+}
+
+
+TEST_CASE("lab2") {
+    char argv[] = {"lab2"};
+    REQUIRE(test_main(0, (char **)argv) == 0);
 }

@@ -1,3 +1,6 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include "doctest.h"
+
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
 #include "PerfTracer.h"
@@ -39,7 +42,7 @@ struct CpuStatus {
     uint32_t uartTxBusy;
 };
 
-int main(int argc, char **argv) {
+int test_main(int argc, char **argv) {
     // freopen("trace.txt", "w", stdout);
 
     // 性能计数器
@@ -163,6 +166,7 @@ int main(int argc, char **argv) {
                     print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
                     print_gpr(s_ref.gpr);
                 }
+                return 1;
                 break;
             }
         } else {
@@ -174,11 +178,18 @@ int main(int argc, char **argv) {
         if (StayCnt >= 10) {
             print_info("Pass the DiffTest!");
             perfTracer.print();
+            return 0;
             break;
         }
     }
 
+    return 0;
 
     // std::cout << "=====================" << std::endl;
     // std::cout << "Totally Step: " << stepCnt << std::endl;
+}
+
+TEST_CASE("lab1") {
+    char argv[] = {"lab1"};
+    REQUIRE(test_main(0, (char **)argv) == 0);
 }
