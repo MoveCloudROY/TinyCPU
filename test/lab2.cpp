@@ -176,6 +176,14 @@ int test_main(int argc, char **argv) {
             ++StayCnt;
         }
 
+        while (cpuRef.uart.exist_tx()) {
+            char c = cpuRef.uart.getc();
+            if (c != '\r') {
+                debug("%c", c);
+                fflush(stdout);
+            }
+        }
+
         running = !cpuRef.is_finished();
 
         if (StayCnt >= 10) {
@@ -186,6 +194,11 @@ int test_main(int argc, char **argv) {
         }
         auto endTime = std::chrono::high_resolution_clock::now();
         auto during  = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+        // if (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() % 100 == 0) {
+        //     debug("[UART.RX] rx: 0x%08X", cpuRef.uart.rx.front());
+        //     while (!cpuRef.uart.rx.empty())
+        //         cpuRef.uart.rx.pop();
+        // }
         if (during > 10) {
             print_err("CPU emulation timeout!");
             return 1;
