@@ -43,7 +43,7 @@ jobs:
         sudo make install
 
     - name: Initialize 3rdparty
-      run: git submodule --init --recursive
+      run: git submodule update --init --recursive
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.

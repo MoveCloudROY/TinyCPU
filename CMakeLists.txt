@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project(sim)
 
-set(LOONG_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.bin)
+set(LOONG_LAB1_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab1.bin)
+set(LOONG_LAB2_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.bin)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 20)
@@ -21,3 +22,6 @@ endif()
 add_subdirectory(3rdparty)
 add_subdirectory(src)
 add_subdirectory(vsrc)
+
+enable_testing()
+add_subdirectory(test)

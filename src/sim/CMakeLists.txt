@@ -3,7 +3,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_executable(sim ${SOURCES})
 
 target_include_directories(sim  PUBLIC include)
-target_link_libraries(sim PRIVATE vsrc)
+target_link_libraries(sim PRIVATE vsrc_lab1)
 
 message(STATUS CMAKE_SOURCE_DIR=${CMAKE_SOURCE_DIR})
 
