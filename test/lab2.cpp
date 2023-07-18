@@ -5,6 +5,7 @@
 #include "CpuTracer.h"
 #include "PerfTracer.h"
 #include "Status.h"
+#include "ThreadRaii.h"
 
 #include "Vtop.h"
 #include "Vtop___024root.h"
@@ -78,7 +79,7 @@ int test_main(int argc, char **argv) {
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, 0, true, false};
 
 
-    std::thread uart_input_thread{[&]() {
+    ThreadRaii uart_input_thread{[&]() {
         termios tmp;
         tcgetattr(STDIN_FILENO, &tmp);
         tmp.c_lflag &= (~ICANON & ~ECHO);
@@ -180,7 +181,7 @@ int test_main(int argc, char **argv) {
             // debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
-            if (!compare_status(lastPcStatus, cpuRefStatus)) {
+            if (!compare_status(lastPcStatus, cpuRefStatus, cpu)) {
                 // for (int k = 0; k < 10; ++k)
                 //     cpu.step();
                 // 错误时，打印出历史记录
@@ -240,7 +241,6 @@ int test_main(int argc, char **argv) {
         }
     }
 
-    uart_input_thread.detach();
     return 0;
     // std::cout << "=====================" << std::endl;
     // std::cout << "Totally Step: " << stepCnt << std::endl;

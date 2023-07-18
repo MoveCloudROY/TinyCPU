@@ -149,7 +149,7 @@ int test_main(int argc, char **argv) {
             // debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
-            if (!compare_status(lastPcStatus, cpuRefStatus)) {
+            if (!compare_status(lastPcStatus, cpuRefStatus, cpu)) {
                 // for (int k = 0; k < 10; ++k)
                 //     cpu.step();
                 // 错误时，打印出历史记录

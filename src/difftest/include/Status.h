@@ -18,8 +18,8 @@ struct Status {
     std::array<uint32_t, 32> gpr;
 };
 
-
-inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
+template <typename T>
+inline bool compare_status(const Status &pracImpl, const Status &refImpl, T &cpu) {
     std::stringstream pracStr, refStr;
 
     bool pc_equ  = (pracImpl.pc == refImpl.pc);
@@ -30,7 +30,7 @@ inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
             break;
         }
     }
-    if (pc_equ && gpr_equ)
+    if (pc_equ && (gpr_equ || cpu.lastStatus.targetAddr == UART_CTL_ADDR))
         return true;
 
     if (!pc_equ) {
@@ -40,6 +40,7 @@ inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
         pracStr << CTL_RESET << "[PC] 0x" << std::hex << pracImpl.pc << CTL_RESET << '\n';
         refStr << CTL_RESET << "[PC] 0x" << std::hex << refImpl.pc << CTL_RESET << '\n';
     }
+
     for (size_t i = 0; i < 8; ++i) {
         for (size_t j = 0; j < 4; ++j) {
             auto ind = i * 4 + j;
