@@ -16,8 +16,14 @@
 // clang-format off
 #define print_err(fmt, args...) printf(CTL_RED "[error] "  fmt CTL_RESET "\n", ##args)
 #define print_info(fmt, args...) printf(CTL_GREEN "[info] " fmt CTL_RESET "\n", ##args)
-#define print_d(color ,fmt , args...) printf(color fmt CTL_RESET "\n", ##args)
+#define print_d(color, fmt , args...) printf(color fmt CTL_RESET "\n", ##args)
 #define debug(fmt, args...) printf(CTL_BLUE "[DEBUG] %s:%d:%s" CTL_RESET "  "  fmt "\n", __FILE_NAME__, __LINE__, __func__, ##args)
+
+
+#define uprint(terminal, fmt, args...) fprintf(terminal, fmt, ##args)
+#define uprint_err(terminal, fmt, args...) fprintf(terminal, CTL_RED "[error] "  fmt CTL_RESET "\n", ##args)
+#define uprint_info(terminal, fmt, args...) fprintf(terminal, CTL_GREEN "[info] " fmt CTL_RESET "\n", ##args)
+#define uprint_d(terminal, color, fmt, args...) fprintf(terminal, color fmt CTL_RESET "\n", ##args)
 // clang-format on
 
 #define U8H(x) (int8_t)((int8_t)((x) >> 4) & 0x0F)

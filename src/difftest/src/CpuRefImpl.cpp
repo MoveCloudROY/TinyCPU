@@ -1,5 +1,6 @@
 #include "CpuRefImpl.h"
 #include "device/uart8250.hpp"
+#include "tools.h"
 #include <array>
 #include <cstdint>
 #include <iterator>
@@ -32,20 +33,7 @@ CpuRefImpl::CpuRefImpl(std::string path, size_t start_addr, bool device_sim_t, b
     , core{0, mmio, trace, 0}
     , uart{}
     , mtx{}
-    , cv{}
-    , uart_input_thread{[&](uartsim &uart) {
-                            termios tmp;
-                            tcgetattr(STDIN_FILENO, &tmp);
-                            tmp.c_lflag &= (~ICANON & ~ECHO);
-                            tcsetattr(STDIN_FILENO, TCSANOW, &tmp);
-                            while (true) {
-                                char c = getchar();
-                                if (c == 10)
-                                    c = 13; // convert lf to cr
-                                uart.putc(c);
-                            }
-                        },
-                        std::ref(uart)} {
+    , cv{} {
 
     func_mem.load_binary(start_addr, path.c_str());
     func_mem.set_allow_warp(true);
@@ -64,7 +52,6 @@ CpuRefImpl::CpuRefImpl(std::string path, size_t start_addr, bool device_sim_t, b
 }
 
 CpuRefImpl::~CpuRefImpl() {
-    uart_input_thread.detach();
 }
 
 void CpuRefImpl::operator+=(int step) {

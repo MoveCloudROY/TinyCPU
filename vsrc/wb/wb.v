@@ -3,9 +3,9 @@
 
 module wb(
     
-    output [  4:0] rf_wdest_o,     // 寄存器写地址
+    output [  4:0] rf_wdest_o /* verilator public_flat */,     // 寄存器写地址
     output         rf_we_o,       // 寄存器写使能
-    output [ 31:0] rf_wdata_o,     // 寄存器写数据
+    output [ 31:0] rf_wdata_o /* verilator public_flat */,     // 寄存器写数据
 
     //5级流水新增接口
     

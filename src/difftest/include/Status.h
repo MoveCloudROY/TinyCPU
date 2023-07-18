@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CpuRefImpl.h"
 #include "tools.h"
 
 #include <array>
@@ -7,6 +8,9 @@
 #include <iomanip>
 #include <iostream>
 
+
+constexpr const uint32_t UART_DATA_ADDR = 0xbfd003f8;
+constexpr const uint32_t UART_CTL_ADDR  = 0xbfd003fC;
 
 // 指令PC及提交后状态
 struct Status {
@@ -57,4 +61,45 @@ inline bool compare_status(const Status &pracImpl, const Status &refImpl) {
     std::cout << CTL_ORIANGE << "PracImpl <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< PracImpl" CTL_RESET "\n";
 
     return false;
+}
+
+template <typename T>
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
+    print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go into UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
+    // Start bit
+    cpu->rxd_i = 0;
+    cpu.step();
+    // Data bit
+    for (int i = 0; i < 8 && !cpu.lastStatus.uartRxReady; ++i) {
+        cpu->rxd_i = (ch >> i) & 0x01;
+        cpu.step();
+        bool waitingUartRx = !cpu.lastStatus.uartRxReady && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "send 0x%01X in %c at [%d]", (ch >> i) & 0x01, ch, i);
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "rxd_i: 0x%01X", cpu->rxd_i);
+    }
+    // End bit
+    cpu->rxd_i = 1;
+    cpu.step();
+
+    // CPU 完成 load，并执行完当前指令
+    while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+        cpu.step();
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+    cpu.step();
+    // while (cpuRef.get_gpr())
+
+    // 同步至 CpuRef
+    // 当
+    // bool waitingUartRx = !cpu.lastStatus.uartRxReady || ((cpu.nowStatus.targetAddr == UART_CTL_ADDR) && ((cpu.nowStatus.targetData & 0x02) != 0x02));
+    // debug("a: %d, b: %d", cpu.lastStatus.uartRxReady, (cpu.nowStatus.targetAddr == UART_CTL_ADDR));
+
+    while (cpu.lastStatus.pc != cpuRef.get_pc()) {
+        cpuRef.step();
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+    return;
 }

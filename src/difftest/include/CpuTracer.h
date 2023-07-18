@@ -5,20 +5,18 @@
 #include <cstddef>
 #include <memory>
 #include <string>
+#include <functional>
 #include "verilated.h"
 #include "verilated_vcd_c.h"
-#include "Status.h"
 
 
 namespace difftest {
 
-template <typename T>
+template <typename T, typename TStatus>
 class CpuTracer {
 public:
     CpuTracer(int argc, char **argv)
-        : context{std::make_unique<VerilatedContext>()}
-        , beforeCallback{[]() {}}
-        , afterCallback{[]() {}} {
+        : context{std::make_unique<VerilatedContext>()} {
         context->commandArgs(argc, argv);
         top = new T{context.get()};
     }
@@ -46,7 +44,7 @@ public:
         }
     }
     void step() {
-        beforeCallback();
+        lastStatus = beforeCallback();
         context->timeInc(1);
         top->clk_i = 0;
         top->eval();
@@ -58,8 +56,10 @@ public:
         context->timeInc(1);
         top->clk_i = 1;
         top->eval();
-        if (wave_on)
+        if (wave_on) {
             tfp->dump(context->time());
+            tfp->flush();
+        }
 
         // // Now the negative edge
         // context->timeInc(1);
@@ -69,7 +69,7 @@ public:
         //     tfp->dump(context->time());
         //     tfp->flush();
         // }
-        afterCallback();
+        nowStatus = afterCallback();
     }
 
     void reset_all() {
@@ -81,14 +81,14 @@ public:
         }
 
         top->rst_i = 0;
-        // top->rxd_i = 1;
+        top->rxd_i = 1;
         printf("[mycpu] Reset done.\n");
     }
 
-    void register_beforeCallback(std::function<void(void)> beforeCallback_t) {
+    void register_beforeCallback(std::function<TStatus(void)> beforeCallback_t) {
         beforeCallback = beforeCallback_t;
     }
-    void register_afterCallback(std::function<void(void)> afterCallback_t) {
+    void register_afterCallback(std::function<TStatus(void)> afterCallback_t) {
         afterCallback = afterCallback_t;
     }
 
@@ -98,14 +98,14 @@ public:
 
 public:
     uartsim uart;
-    Status  lastStatus;
+    TStatus lastStatus{}, nowStatus{};
 
 private:
     std::unique_ptr<VerilatedContext> context;
     T                                *top;
     std::unique_ptr<VerilatedVcdC>    tfp;
-    std::function<void(void)>         beforeCallback;
-    std::function<void(void)>         afterCallback;
+    std::function<TStatus(void)>      beforeCallback;
+    std::function<TStatus(void)>      afterCallback;
     bool                              wave_on;
 };
 

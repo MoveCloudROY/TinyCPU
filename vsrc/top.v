@@ -460,7 +460,7 @@ module top (
             .clk(clk_i),                      //外部时钟信号
             .RxD(rxd_i),                        //外部串行信号输入
             .RxD_data_ready(ext_uart_rx_ready),    //数据接收到标志
-            .RxD_clear(ext_uart_rx_clear),         //清除接收标志
+            .RxD_clear(ext_uart_rx_ready),         //清除接收标志
             .RxD_data(ext_uart_rx)              //接收到的一字节数据
         );
     //发送模块,9600无检验位
@@ -477,12 +477,12 @@ module top (
 
     assign ext_uart_rx_clear = ext_uart_rx_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
     always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
-        if(ext_uart_rx_ready & !uart_re_n_c) begin
+        if(ext_uart_rx_ready) begin
             ext_uart_rxbuf <= ext_uart_rx;
             ext_uart_avai <= 1;
-        end else if(!ext_uart_tx_busy && ext_uart_avai) begin 
+        end /* else if(ext_uart_avai & !uart_re_n_c) begin 
             ext_uart_avai <= 0;
-        end
+        end */
     end
 
     always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
@@ -601,7 +601,7 @@ module top (
         .ext_ram_we_n (ext_ram_we_n_c),
 
         .uart_tx_ready  (~ext_uart_tx_busy),
-        .uart_rx_ready  (ext_uart_rx_ready),
+        .uart_rx_ready  (ext_uart_avai),
         .uart_we_n_o    (uart_we_n_c),
         .uart_re_n_o    (uart_re_n_c),
         .uart_tx_data_o (ext_uart_txbuf_c),

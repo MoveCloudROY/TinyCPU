@@ -43,8 +43,6 @@ public:
 
     std::mutex              mtx;
     std::condition_variable cv;
-    std::thread             uart_input_thread;
-
 
     ram func_mem{1024 * 1024};
     ram data_mem0{0x1000000};
