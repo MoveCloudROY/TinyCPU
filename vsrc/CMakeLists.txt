@@ -11,6 +11,7 @@ verilate(
     VERILATOR_ARGS -x-assign 1 
     VERILATOR_ARGS --timing
     VERILATOR_ARGS +define+LOONG_BIN_PATH=${LOONG_LAB1_BIN_PATH}
+    VERILATOR_ARGS +define+LOONG_DBIN_PATH=${LOONG_LAB1_DBIN_PATH}
     SOURCES top.v ${FILES} common.vh
     TOP_MODULE top
 )
@@ -21,6 +22,7 @@ verilate(
     VERILATOR_ARGS -x-assign 1 
     VERILATOR_ARGS --timing
     VERILATOR_ARGS +define+LOONG_BIN_PATH=${LOONG_LAB2_BIN_PATH}
+    VERILATOR_ARGS +define+LOONG_DBIN_PATH=${LOONG_LAB2_DBIN_PATH}
     SOURCES top.v ${FILES} common.vh
     TOP_MODULE top
 )

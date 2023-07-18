@@ -3,7 +3,11 @@ cmake_minimum_required(VERSION 3.0.0)
 project(sim)
 
 set(LOONG_LAB1_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab1.bin)
+set(LOONG_LAB1_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab1.dbin)
+
 set(LOONG_LAB2_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.bin)
+set(LOONG_LAB2_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.dbin)
+
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 20)
