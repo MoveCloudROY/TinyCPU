@@ -69,7 +69,7 @@ public:
         //     tfp->dump(context->time());
         //     tfp->flush();
         // }
-        update_tx(top->txd_o);
+        update_tx(top->txd_o, top->rootp->top__DOT__ext_uart_t__DOT__BitTick);
         nowStatus = afterCallback();
     }
 
@@ -107,15 +107,17 @@ public:
     }
 
 
-    T *
-    operator->() {
+    T *operator->() {
         return top;
     }
 
 private:
-    void update_tx(char txd) {
+    void update_tx(char txd, bool uartPulse) {
         static int state = 0;
         // state : start<0>(1bit) --> data<...>(8bit) --> stop<1>(1bit)
+
+        if (!uartPulse)
+            return;
 
         txd = txd & 0x01;
         switch (state) {

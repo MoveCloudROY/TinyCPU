@@ -11,7 +11,7 @@ info:
 
     .p2align 2
 feed:
-    .asciz "All PASS!"
+    .asciz "Alm PBSU!"
 
     .p2align 2
 fib:

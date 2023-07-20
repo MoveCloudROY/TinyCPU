@@ -31,9 +31,9 @@ parameter Baud = 115200;
 
 ////////////////////////////////
 `ifdef SIMULATION
-wire BitTick = 1'b1;  // output one bit per clock cycle
+wire BitTick = 1'b1/* verilator public_flat */;  // output one bit per clock cycle
 `else
-wire BitTick;
+wire BitTick/* verilator public_flat */;
 BaudTickGen #(ClkFrequency, Baud) tickgen(.clk(clk), .enable(TxD_busy), .tick(BitTick));
 `endif
 

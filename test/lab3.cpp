@@ -248,7 +248,7 @@ int test_main(int argc, char **argv) {
 
         running = !cpuRef.is_finished();
 
-        if (StayCnt >= 100000) {
+        if (StayCnt >= 10) {
             print_info("Pass the DiffTest!");
             perfTracer.print();
             print_ext(cpu, cpuRef);

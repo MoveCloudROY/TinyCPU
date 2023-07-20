@@ -32,7 +32,7 @@ module mem(
     
     
     //pc
-    (*mark_debug = "true"*)wire [`RegW - 1:0] pc;
+    wire [`RegW - 1:0] pc;
 
     assign {
         mem_control,
@@ -103,7 +103,7 @@ module mem(
     
     // load读出的数据
     wire        load_sign;
-    (*mark_debug = "true"*)wire [31:0] load_result;
+    wire [31:0] load_result;
 
     wire [7:0] cat8_result;
     wire [15:0] cat16_result;

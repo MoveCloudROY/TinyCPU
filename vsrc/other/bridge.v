@@ -12,7 +12,7 @@ module bridge (
 
     input [31:0] lsu_wdata_i,
     output[31:0] lsu_rdata_o,
-    (*mark_debug = "true"*)input [31:0] lsu_addr_i,
+    input [31:0] lsu_addr_i,
     input [3:0]  lsu_be_n_i,
     input        lsu_re_n_i,
     input        lsu_we_n_i,
@@ -133,7 +133,7 @@ module bridge (
 
 
     assign uart_tx_data_o = lsu_uart_valid & ~lsu_we_n_i? lsu_wdata_i[7:0]
-                        : 8'hcc;
+                        : 8'h25; // %
     assign uart_we_n_o = lsu_uart_valid ? lsu_we_n_i : 1;
     assign uart_re_n_o = lsu_uart_valid ? lsu_re_n_i : 1;
 

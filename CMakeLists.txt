@@ -8,6 +8,8 @@ set(LOONG_LAB1_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab1.dbin)
 set(LOONG_LAB2_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.bin)
 set(LOONG_LAB2_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.dbin)
 
+set(LOONG_LAB3_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab3.bin)
+set(LOONG_LAB3_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab3.dbin)
 
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 20)

@@ -447,8 +447,8 @@ module top (
     //直连串口接收发送演示，从直连串口收到的数据再发送出去
     reg [7:0] ext_uart_rxbuf;
     wire[7:0] ext_uart_rx;
-    reg [7:0] ext_uart_tx;
-    (*mark_debug = "true"*)wire ext_uart_rx_ready;
+    (*mark_debug = "true"*)reg [7:0] ext_uart_tx;
+    wire ext_uart_rx_ready;
     wire ext_uart_rx_clear;
     wire ext_uart_tx_busy;
     reg ext_uart_tx_start, ext_uart_avai;
@@ -514,7 +514,7 @@ module top (
             ext_uart_tx <= 8'd0;
         end else if(!ext_uart_tx_busy & !uart_we_n_c) begin 
             ext_uart_tx <= ext_uart_txbuf_c;
-            ext_uart_tx_start <=1'b 1;
+            ext_uart_tx_start <=1'b1;
         end else begin 
             ext_uart_tx_start <= 1'b0;
         end
