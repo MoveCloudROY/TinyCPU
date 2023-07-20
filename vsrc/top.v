@@ -447,7 +447,7 @@ module top (
     //直连串口接收发送演示，从直连串口收到的数据再发送出去
     reg [7:0] ext_uart_rxbuf;
     wire[7:0] ext_uart_rx;
-    (*mark_debug = "true"*)reg [7:0] ext_uart_tx;
+    /*(*mark_debug = "true"*) */reg [7:0] ext_uart_tx;
     wire ext_uart_rx_ready;
     wire ext_uart_rx_clear;
     wire ext_uart_tx_busy;
