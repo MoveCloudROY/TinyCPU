@@ -69,6 +69,7 @@ public:
         //     tfp->dump(context->time());
         //     tfp->flush();
         // }
+        update_tx(top->txd_o);
         nowStatus = afterCallback();
     }
 
@@ -92,13 +93,67 @@ public:
         afterCallback = afterCallback_t;
     }
 
-    T *operator->() {
+    bool exist_tx() {
+        return !txBuf.empty();
+    }
+
+    char get_tx_c() {
+        if (!txBuf.empty()) {
+            char res = txBuf.front();
+            txBuf.pop();
+            return res;
+        } else
+            return EOF;
+    }
+
+
+    T *
+    operator->() {
         return top;
     }
 
+private:
+    void update_tx(char txd) {
+        static int state = 0;
+        // state : start<0>(1bit) --> data<...>(8bit) --> stop<1>(1bit)
+
+        txd = txd & 0x01;
+        switch (state) {
+        case 0: {
+            if (txd == 0) {
+                txTerm = 0;
+                state += 1;
+            }
+            break;
+        }
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+        case 6:
+        case 7:
+        case 8: {
+            txTerm |= (txd << (state - 1));
+            state += 1;
+            break;
+        }
+        case 9: {
+            if (txd == 1) {
+                txBuf.push(txTerm);
+                state = 0;
+            }
+            break;
+        }
+        }
+    }
+
+
 public:
-    uartsim uart;
-    TStatus lastStatus{}, nowStatus{};
+    TStatus          lastStatus{}, nowStatus{};
+    char             txTerm;
+    std::queue<char> txBuf;
+
 
 private:
     std::unique_ptr<VerilatedContext> context;

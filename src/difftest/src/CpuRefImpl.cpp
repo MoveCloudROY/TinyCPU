@@ -25,7 +25,7 @@ namespace difftest {
 // }
 
 
-CpuRefImpl::CpuRefImpl(std::string path, size_t start_addr, bool device_sim_t, bool trace_t)
+CpuRefImpl::CpuRefImpl(std::string cpath, std::string dpath, size_t cstart_addr, size_t dstart_addr, bool device_sim_t, bool trace_t)
     : device_sim{device_sim_t}
     , trace{trace_t}
     , mmio{}
@@ -35,8 +35,10 @@ CpuRefImpl::CpuRefImpl(std::string path, size_t start_addr, bool device_sim_t, b
     , mtx{}
     , cv{} {
 
-    func_mem.load_binary(start_addr, path.c_str());
+    func_mem.load_binary(cstart_addr, cpath.c_str());
     func_mem.set_allow_warp(true);
+    if (dpath != "")
+        data_mem1.load_binary(0x0400000 + dstart_addr, dpath.c_str());
 
     assert(mmio.add_dev(0x00000000, 0x100000, &func_mem));
     // assert(mmio.add_dev(0x00000000, 0x1000000, &data_mem0));

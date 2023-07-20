@@ -5,6 +5,7 @@
 #include "CpuTracer.h"
 #include "PerfTracer.h"
 #include "Status.h"
+#include "ThreadRaii.h"
 
 #include "Vtop.h"
 #include "Vtop___024root.h"
@@ -32,7 +33,7 @@
 #include <termios.h>
 
 // 参考实现缓冲队列
-constexpr const size_t Q_SIZE = 10;
+constexpr const size_t Q_SIZE = 5;
 
 std::queue<Status> inst_done_q;
 std::queue<Status> inst_ref_q;
@@ -40,9 +41,10 @@ std::queue<Status> inst_ref_q;
 struct CpuStatus {
     uint32_t pc;
     uint32_t targetAddr;
+    uint32_t targetData;
     uint32_t uartTxBusy;
+    uint32_t uartRxReady;
 };
-
 
 int test_main(int argc, char **argv) {
     // freopen("trace.txt", "w", stdout);
@@ -56,7 +58,14 @@ int test_main(int argc, char **argv) {
     // CpuStatus cpu.lastStatus{};
     // CpuStatus cpu.nowStatus{};
     auto updateFunc = [&]() -> CpuStatus {
-        return {cpu->rootp->top__DOT__mem2wb_bus_r[0], cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr, cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy};
+        return {
+            cpu->rootp->top__DOT__mem2wb_bus_r[0],
+            cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr,
+            cpu->rootp->top__DOT__U_wb__DOT__rf_wdata_o,
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy,
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_avai
+
+        };
     };
     cpu.register_beforeCallback(updateFunc);
     cpu.register_afterCallback(updateFunc);
@@ -64,11 +73,34 @@ int test_main(int argc, char **argv) {
     cpu.enable_trace("top.vcd");
     cpu.reset_all();
 
+    bool sendFlag = false;
+    char sendChar = ' ';
     // 初始化参考实现
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, 0, true, false};
 
+
+    ThreadRaii uart_input_thread{[&]() {
+        termios tmp;
+        tcgetattr(STDIN_FILENO, &tmp);
+        tmp.c_lflag &= (~ICANON & ~ECHO);
+        tcsetattr(STDIN_FILENO, TCSANOW, &tmp);
+        while (true) {
+            char c = getchar();
+            debug("[UART] rx: %c", c);
+            if (c == 10)
+                c = 13; // convert lf to cr
+
+            // cpuRef.uart.putc(c);
+            // uart_putc(cpu, cpuRef, c);
+            sendChar = c;
+            sendFlag = true;
+        }
+    }};
+
+
     bool   running = true;
     size_t StayCnt = 0;
+    ;
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -93,15 +125,14 @@ int test_main(int argc, char **argv) {
         if (waitingUartTx) {
             // Ref CPU 进行取串口数据指令
             cpuRef.step();
-            print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+            // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             // 等待数据读取完成，并执行完当前指令
             while (cpu.lastStatus.uartTxBusy || cpu.lastStatus.pc == cpu.nowStatus.pc) {
                 cpu.step();
 
                 waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
 
-                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- lastPc: 0x%08X   nowPc: 0x%08X", cpu.lastStatus.pc, cpu.nowStatus.pc);
+                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             }
 
             cpu.step();
@@ -110,7 +141,7 @@ int test_main(int argc, char **argv) {
             while (cpu.lastStatus.pc != cpuRef.get_pc()) {
                 cpu.step();
                 waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             }
         }
 
@@ -127,6 +158,9 @@ int test_main(int argc, char **argv) {
 
         //考虑有效性，当 PC 发生变更，则有效
         if (lastPcStatus.pc != cpu.nowStatus.pc) {
+
+            debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+
             StayCnt = 0;
             // 将上一个 pc状态压入
             inst_done_q.push(lastPcStatus);
@@ -175,18 +209,82 @@ int test_main(int argc, char **argv) {
             ++StayCnt;
         }
 
+        std::string RefUartTxStr{};
+        std::string PracUartTxStr{};
         while (cpuRef.uart.exist_tx()) {
             char c = cpuRef.uart.getc();
             if (c != '\r') {
-                debug("%c", c);
+                RefUartTxStr += c;
+                print_d(CTL_LIGHTBLUE, "[REF.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
                 fflush(stdout);
             }
+        }
+
+        while (cpu.exist_tx()) {
+            char c = cpu.get_tx_c();
+            if (c != '\r') {
+                PracUartTxStr += c;
+                print_d(CTL_LIGHTBLUE, "[Prac.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
+                fflush(stdout);
+            }
+        }
+
+        if (RefUartTxStr == ".") {
+            cpuRef.uart.putc('T');
+            uart_putc(cpu, cpuRef, 'T');
+        }
+
+        if (sendFlag) {
+            cpuRef.uart.putc(sendChar);
+            uart_putc(cpu, cpuRef, sendChar);
+            sendFlag = false;
         }
 
         running = !cpuRef.is_finished();
 
         if (StayCnt >= 10) {
             print_info("Pass the DiffTest!");
+
+            print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+            print_info("ExtRAM 0x0 ~ 0x100");
+            uint8_t buff[512];
+            cpuRef.mmio.do_read(0x80400000, 0x100, buff);
+            for (int i = 0; i < 16; ++i) {
+                std::printf("%08x: ", i * 16);
+                for (int j = 0; j < 16; ++j) {
+                    std::printf("%02x ", buff[i * 16 + j]);
+                }
+                std::printf("\n");
+            }
+
+            print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+            print_info("ExtRAM 0x100 ~ 0x10c ");
+            cpuRef.mmio.do_read(0x80400100, 0xc, buff);
+            for (int j = 0; j < 0xc; ++j) {
+                std::printf("%02x ", buff[j]);
+            }
+            std::printf("\n");
+
+            print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+            print_info("DRAM 0x0 ~ 0x100");
+            for (int i = 0; i < 16; ++i) {
+                std::printf("%08x: ", i * 16);
+                for (int j = 0; j < 4; ++j) {
+                    auto t = cpu->rootp->top__DOT__U_dram__DOT__mem[0 + i * 4 + j];
+                    // std::printf("%08x ", t);
+                    std::printf("%02x %02x %02x %02x ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
+                }
+                std::printf("\n");
+            }
+
+            print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+            print_info("DRAM 0x100 ~ 0x10c ");
+            for (int j = 0; j < 0xc / 4; ++j) {
+                auto t = cpu->rootp->top__DOT__U_dram__DOT__mem[0x0100 / 4 + j];
+                std::printf("%02x %02x %02x %02x ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
+            }
+            std::printf("\n");
+
             perfTracer.print();
             return 0;
             break;
@@ -198,7 +296,7 @@ int test_main(int argc, char **argv) {
         //     // while (!cpuRef.uart.rx.empty())
         //     //     cpuRef.uart.rx.pop();
         // }
-        if (during > 10) {
+        if (during > 100) {
             print_err("CPU emulation timeout!");
             return 1;
         }
@@ -210,7 +308,7 @@ int test_main(int argc, char **argv) {
 }
 
 
-TEST_CASE("lab1") {
-    char argv[] = {"lab1"};
+TEST_CASE("lab2") {
+    char argv[] = {"lab2"};
     REQUIRE(test_main(0, (char **)argv) == 0);
 }

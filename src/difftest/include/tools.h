@@ -4,6 +4,7 @@
 #include <bitset>
 #include <iostream>
 #include <string>
+#include <fstream>
 
 #define CTL_RED "\033[31;1m"
 #define CTL_GREEN "\033[32;1m"
@@ -41,4 +42,40 @@ void print_gpr(T arr) {
         }
         std::printf("\n");
     }
+}
+
+inline bool ramdom_init_ext(const char *path) {
+    // Open the file in binary mode
+    std::ofstream binaryFile(path, std::ios::binary | std::ios::out);
+
+    if (!binaryFile.is_open()) {
+        debug("Error opening the file.");
+        return 0;
+    }
+
+    // Define the number of bytes to fill with zeros
+    const int sizeToFill = 0x10c;
+
+    // Create a vector of zeros with the size we want to fill
+    std::vector<char> extdata(sizeToFill, 0);
+    for (int i = 0x100; i < 0x10c; ++i) {
+        extdata[i] = rand();
+    }
+    extdata[0x104] = 0xFF;
+    extdata[0x105] = 0x0F;
+    extdata[0x106] = 0;
+    extdata[0x107] = 0;
+
+    extdata[0x108] = 0;
+    extdata[0x109] = 0;
+    extdata[0x10a] = 0;
+    extdata[0x10b] = 0;
+
+
+    // Write the zeros to the file
+    binaryFile.write(extdata.data(), sizeToFill);
+
+    // Close the file
+    binaryFile.close();
+    return 1;
 }

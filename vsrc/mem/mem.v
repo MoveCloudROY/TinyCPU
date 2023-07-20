@@ -32,7 +32,7 @@ module mem(
     
     
     //pc
-    wire [`RegW - 1:0] pc;
+    (*mark_debug = "true"*)wire [`RegW - 1:0] pc;
 
     assign {
         mem_control,
@@ -103,14 +103,16 @@ module mem(
     
     // load读出的数据
     wire        load_sign;
-    wire [31:0] load_result;
+    (*mark_debug = "true"*)wire [31:0] load_result;
 
-    wire [7:0] cat8_result =    (exe_result[1:0] == 2'd0) ? dm_rdata_i[ 7:0] :
+    wire [7:0] cat8_result;
+    wire [15:0] cat16_result;
+    assign cat8_result =    (exe_result[1:0] == 2'd0) ? dm_rdata_i[ 7:0] :
                                 (exe_result[1:0] == 2'd1) ? dm_rdata_i[15:8] : 
                                 (exe_result[1:0] == 2'd2) ? dm_rdata_i[23:16] : 
                                 dm_rdata_i[31:24];
 
-    wire [15:0] cat16_result =   (exe_result[1] == 1'b0) ? dm_rdata_i[15:0] :
+    assign cat16_result =   (exe_result[1] == 1'b0) ? dm_rdata_i[15:0] :
                                 dm_rdata_i[31:16];
 
     assign load_sign =  (ld_st_size == 3'd4 ) ? cat8_result[7] :

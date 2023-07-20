@@ -263,13 +263,13 @@ module id(
     assign inst_or  = inst_OR  | inst_ORI;                          // 逻辑或
     assign inst_xor = inst_XOR | inst_XORI;                         // 逻辑异或
     assign inst_sll = inst_SLL_W | inst_SLLI_W;                     // 逻辑左移
-    assign inst_srl = inst_SRL_W | inst_SRLI_W;                     // 逻辑右移
+    assign inst_srl = inst_SRL_W | inst_SLLI_W;                     // 逻辑右移
     assign inst_sra = inst_SRA_W | inst_SRAI_W;                     // 算术右移
     assign inst_lui = inst_LU12I_W;                                 // 立即数装载高位
 
-    // //使用sa域作为偏移量的移位指令
-    // wire inst_shf_sa;
-    // assign inst_shf_sa =  inst_SLL | inst_SRL | inst_SRA;
+    // 立即数移位
+    wire inst_shf_imm;
+    assign inst_shf_imm =  inst_SLLI_W | inst_SLLI_W | inst_SRAI_W;
     
     // 依据立即数扩展方式分类
     wire inst_imm_zero;   //立即数0扩展
@@ -387,7 +387,8 @@ module id(
     assign id_rk = inst_j_link ? 32'd4 :
                     inst_imm_zero? {20'd0, _2ri12_i12} :
                     inst_imm_sign12? {{20{_2ri12_i12[11]}}, _2ri12_i12} :
-                    inst_imm_sign20? {_1rsi20_si20, 12'b0} : rk_data_i; // 对于 LU12i 之后直接取 rk 作为输出， 
+                    inst_imm_sign20? {_1rsi20_si20, 12'b0} :
+                    inst_shf_imm? {27'd0, _3r_rk} : rk_data_i; // 对于 LU12i 之后直接取 rk 作为输出， 
                                                                         // 对于 PCADDU12I 则需 将 rj(pc) + rk 作为输出
 
     // MEM 需要的数据

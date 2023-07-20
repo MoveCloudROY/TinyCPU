@@ -12,7 +12,7 @@ module bridge (
 
     input [31:0] lsu_wdata_i,
     output[31:0] lsu_rdata_o,
-    input [31:0] lsu_addr_i,
+    (*mark_debug = "true"*)input [31:0] lsu_addr_i,
     input [3:0]  lsu_be_n_i,
     input        lsu_re_n_i,
     input        lsu_we_n_i,

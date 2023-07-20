@@ -16,7 +16,7 @@ namespace difftest {
 
 class CpuRefImpl {
 public:
-    CpuRefImpl(std::string path, size_t start_addr = 0, bool device_sim = true, bool trace = true);
+    CpuRefImpl(std::string cpath, std::string dpath = "", size_t cstart_addr = 0, size_t dstart_addr = 0, bool device_sim = true, bool trace = true);
     ~CpuRefImpl();
 
     void operator+=(int step);

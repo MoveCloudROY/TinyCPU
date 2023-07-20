@@ -405,7 +405,8 @@ module top (
     DRAM #(.ADDR_BITS(20)) U_dram (
         .clk(clk_i),
         .a(dram_addr),
-        .we(~dram_be_n),
+        .be(~dram_be_n),
+        .we(~dram_we_n),
         .d(dram_wdata),
         .spo(dram_rdata)
     );
@@ -447,11 +448,30 @@ module top (
     reg [7:0] ext_uart_rxbuf;
     wire[7:0] ext_uart_rx;
     reg [7:0] ext_uart_tx;
-    wire ext_uart_rx_ready, ext_uart_rx_clear, ext_uart_tx_busy;
+    (*mark_debug = "true"*)wire ext_uart_rx_ready;
+    wire ext_uart_rx_clear;
+    wire ext_uart_tx_busy;
     reg ext_uart_tx_start, ext_uart_avai;
     wire [7:0] ext_uart_txbuf_c;
     wire [7:0] ext_uart_rxbuf_c;
 
+    wire [31:0] base_ram_wdata_c;
+    wire [31:0] base_ram_rdata_c;
+    wire [19:0] base_ram_addr_c;
+    wire [3:0]  base_ram_be_n_c;
+    wire base_ram_ce_n_c;
+    wire base_ram_oe_n_c;
+    wire base_ram_we_n_c;
+    wire [31:0] ext_ram_wdata_c ;
+    wire [31:0] ext_ram_rdata_c ;
+    wire [19:0] ext_ram_addr_c ;
+    wire [3:0]  ext_ram_be_n_c ;
+    wire ext_ram_ce_n_c ;
+    wire ext_ram_oe_n_c ;
+    wire ext_ram_we_n_c ;
+
+    wire uart_we_n_c;
+    wire uart_re_n_c;
     
     // assign number = ext_uart_buffer;
     //接收模块,9600无检验位
@@ -477,40 +497,28 @@ module top (
 
     assign ext_uart_rx_clear = ext_uart_rx_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
     always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
-        if(ext_uart_rx_ready) begin
+        if (rst_i) begin
+            ext_uart_avai <= 1'b0;
+            ext_uart_rxbuf <= 8'd0;
+        end else if(ext_uart_rx_ready) begin
             ext_uart_rxbuf <= ext_uart_rx;
-            ext_uart_avai <= 1;
+            ext_uart_avai <= 1'b1;
         end /* else if(ext_uart_avai & !uart_re_n_c) begin 
             ext_uart_avai <= 0;
         end */
     end
 
     always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
-        if(!ext_uart_tx_busy & !uart_we_n_c) begin 
+        if (rst_i) begin
+            ext_uart_tx_start <= 1'b0;
+            ext_uart_tx <= 8'd0;
+        end else if(!ext_uart_tx_busy & !uart_we_n_c) begin 
             ext_uart_tx <= ext_uart_txbuf_c;
-            ext_uart_tx_start <= 1;
+            ext_uart_tx_start <=1'b 1;
         end else begin 
-            ext_uart_tx_start <= 0;
+            ext_uart_tx_start <= 1'b0;
         end
     end
-
-    wire [31:0] base_ram_wdata_c;
-    wire [31:0] base_ram_rdata_c;
-    wire [19:0] base_ram_addr_c;
-    wire [3:0]  base_ram_be_n_c;
-    wire base_ram_ce_n_c;
-    wire base_ram_oe_n_c;
-    wire base_ram_we_n_c;
-    wire [31:0] ext_ram_wdata_c ;
-    wire [31:0] ext_ram_rdata_c ;
-    wire [19:0] ext_ram_addr_c ;
-    wire [3:0]  ext_ram_be_n_c ;
-    wire ext_ram_ce_n_c ;
-    wire ext_ram_oe_n_c ;
-    wire ext_ram_we_n_c ;
-
-    wire uart_we_n_c;
-    wire uart_re_n_c;
 
 
     assign ext_uart_rxbuf_c = ext_uart_rxbuf;
@@ -566,13 +574,13 @@ module top (
     // assign ext_ram_we_n =  ~dm_we_c;
 `endif
     bridge U_bridge(
-        .ifu_wdata_i(0),
+        .ifu_wdata_i(32'd0),
         .ifu_rdata_o(if_inst_c),
         .ifu_addr_i(if_pc_c),
         .ifu_be_n_i(4'd0),
-        .ifu_re_n_i(0),
-        .ifu_we_n_i(1),
-        .ifu_req_i(1),
+        .ifu_re_n_i(1'b0),
+        .ifu_we_n_i(1'b1),
+        .ifu_req_i(1'b1),
         .ifu_resp_o(ifu_resp_c),
 
         .lsu_wdata_i(dm_wdata_c),

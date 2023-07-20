@@ -29,7 +29,7 @@
 #include <functional>
 #include <type_traits>
 #include <csignal>
-
+#include <fstream>
 #include <termios.h>
 
 // 参考实现缓冲队列
@@ -47,6 +47,11 @@ struct CpuStatus {
 };
 
 int test_main(int argc, char **argv) {
+    srand(time(0));
+    // 初始化 ExtRam
+    ramdom_init_ext(LOONG_DBIN_PATH);
+
+
     // freopen("trace.txt", "w", stdout);
 
     // 性能计数器
@@ -76,7 +81,7 @@ int test_main(int argc, char **argv) {
     bool sendFlag = false;
     char sendChar = ' ';
     // 初始化参考实现
-    difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, 0, true, false};
+    difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, LOONG_DBIN_PATH, 0, 0, true, false};
 
 
     ThreadRaii uart_input_thread{[&]() {
@@ -125,15 +130,14 @@ int test_main(int argc, char **argv) {
         if (waitingUartTx) {
             // Ref CPU 进行取串口数据指令
             cpuRef.step();
-            print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+            // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             // 等待数据读取完成，并执行完当前指令
             while (cpu.lastStatus.uartTxBusy || cpu.lastStatus.pc == cpu.nowStatus.pc) {
                 cpu.step();
 
                 waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
 
-                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- lastPc: 0x%08X   nowPc: 0x%08X", cpu.lastStatus.pc, cpu.nowStatus.pc);
+                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             }
 
             cpu.step();
@@ -142,7 +146,7 @@ int test_main(int argc, char **argv) {
             while (cpu.lastStatus.pc != cpuRef.get_pc()) {
                 cpu.step();
                 waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-                print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
             }
         }
 
@@ -159,6 +163,9 @@ int test_main(int argc, char **argv) {
 
         //考虑有效性，当 PC 发生变更，则有效
         if (lastPcStatus.pc != cpu.nowStatus.pc) {
+
+            debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+
             StayCnt = 0;
             // 将上一个 pc状态压入
             inst_done_q.push(lastPcStatus);
@@ -200,6 +207,7 @@ int test_main(int argc, char **argv) {
                     print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
                     print_gpr(s_ref.gpr);
                 }
+                print_ext(cpu, cpuRef);
                 return 1;
                 break;
             }
@@ -207,13 +215,31 @@ int test_main(int argc, char **argv) {
             ++StayCnt;
         }
 
+        std::string RefUartTxStr{};
+        std::string PracUartTxStr{};
         while (cpuRef.uart.exist_tx()) {
             char c = cpuRef.uart.getc();
             if (c != '\r') {
-                debug("%c", c);
+                RefUartTxStr += c;
+                print_d(CTL_LIGHTBLUE, "[REF.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
                 fflush(stdout);
             }
         }
+
+        while (cpu.exist_tx()) {
+            char c = cpu.get_tx_c();
+            if (c != '\r') {
+                PracUartTxStr += c;
+                print_d(CTL_LIGHTBLUE, "[Prac.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
+                fflush(stdout);
+            }
+        }
+
+        if (RefUartTxStr == ".") {
+            cpuRef.uart.putc('T');
+            uart_putc(cpu, cpuRef, 'T');
+        }
+
         if (sendFlag) {
             cpuRef.uart.putc(sendChar);
             uart_putc(cpu, cpuRef, sendChar);
@@ -225,6 +251,7 @@ int test_main(int argc, char **argv) {
         if (StayCnt >= 10) {
             print_info("Pass the DiffTest!");
             perfTracer.print();
+            print_ext(cpu, cpuRef);
             return 0;
             break;
         }
@@ -235,12 +262,13 @@ int test_main(int argc, char **argv) {
         //     // while (!cpuRef.uart.rx.empty())
         //     //     cpuRef.uart.rx.pop();
         // }
-        if (during > 10) {
+        if (during > 100) {
             print_err("CPU emulation timeout!");
+            print_ext(cpu, cpuRef);
             return 1;
         }
     }
-
+    print_ext(cpu, cpuRef);
     return 0;
     // std::cout << "=====================" << std::endl;
     // std::cout << "Totally Step: " << stepCnt << std::endl;

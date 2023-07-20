@@ -64,17 +64,19 @@ inline bool compare_status(const Status &pracImpl, const Status &refImpl, T &cpu
     return false;
 }
 
+
 template <typename T>
 void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
+    auto cpu_step5208 = [&]() {for (int _ = 0; _ < 5208; ++_) cpu.step(); };
     print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go into UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
     // Start bit
     cpu->rxd_i = 0;
-    cpu.step();
+    cpu_step5208();
     // Data bit
     for (int i = 0; i < 8 && !cpu.lastStatus.uartRxReady; ++i) {
         cpu->rxd_i = (ch >> i) & 0x01;
-        cpu.step();
+        cpu_step5208();
         bool waitingUartRx = !cpu.lastStatus.uartRxReady && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "send 0x%01X in %c at [%d]", (ch >> i) & 0x01, ch, i);
@@ -83,7 +85,7 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
     }
     // End bit
     cpu->rxd_i = 1;
-    cpu.step();
+    cpu_step5208();
 
     // CPU 完成 load，并执行完当前指令
     while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
@@ -102,5 +104,50 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
         cpuRef.step();
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
+    return;
+}
+
+
+template <typename T>
+void print_ext(T &cpu, difftest::CpuRefImpl &cpuRef) {
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("ExtRAM 0x0 ~ 0x100");
+    uint8_t buff[512];
+    cpuRef.mmio.do_read(0x80400000, 0x100, buff);
+    for (int i = 0; i < 16; ++i) {
+        std::printf("%08x: ", i * 16);
+        for (int j = 0; j < 16; ++j) {
+            std::printf("%02x ", buff[i * 16 + j]);
+        }
+        std::printf("\n");
+    }
+
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("ExtRAM 0x100 ~ 0x10c ");
+    cpuRef.mmio.do_read(0x80400100, 0xc, buff);
+    for (int j = 0; j < 0xc; ++j) {
+        std::printf("%02x ", buff[j]);
+    }
+    std::printf("\n");
+
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("DRAM 0x0 ~ 0x100");
+    for (int i = 0; i < 16; ++i) {
+        std::printf("%08x: ", i * 16);
+        for (int j = 0; j < 4; ++j) {
+            auto t = cpu->rootp->top__DOT__U_dram__DOT__mem[0 + i * 4 + j];
+            // std::printf("%08x ", t);
+            std::printf("%02x %02x %02x %02x ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
+        }
+        std::printf("\n");
+    }
+
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("DRAM 0x100 ~ 0x10c ");
+    for (int j = 0; j < 0xc / 4; ++j) {
+        auto t = cpu->rootp->top__DOT__U_dram__DOT__mem[0x0100 / 4 + j];
+        std::printf("%02x %02x %02x %02x ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
+    }
+    std::printf("\n");
     return;
 }
