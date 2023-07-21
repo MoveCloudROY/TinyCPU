@@ -447,7 +447,7 @@ module top (
     //直连串口接收发送演示，从直连串口收到的数据再发送出去
     reg [7:0] ext_uart_rxbuf;
     wire[7:0] ext_uart_rx;
-    /*(*mark_debug = "true"*) */reg [7:0] ext_uart_tx;
+    // (*mark_debug = "true"*) reg [7:0] ext_uart_tx;
     wire ext_uart_rx_ready;
     wire ext_uart_rx_clear;
     wire ext_uart_tx_busy;
@@ -487,8 +487,8 @@ module top (
     async_transmitter #(.ClkFrequency(50000000),.Baud(9600)) 
         ext_uart_t(
             .clk(clk_i),                      //外部时钟信号
-            .TxD_start(ext_uart_tx_start),         //开始发送信号
-            .TxD_data(ext_uart_tx),              //待发送的数据
+            .TxD_start(!ext_uart_tx_busy & !uart_we_n_c),         //开始发送信号
+            .TxD_data({{8{~rst_i}} & ext_uart_txbuf_c}),              //待发送的数据
 
             .TxD(txd_o),                        //串行信号输出
             .TxD_busy(ext_uart_tx_busy)           //发送器忙状态指示
@@ -508,17 +508,17 @@ module top (
         end */
     end
 
-    always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
-        if (rst_i) begin
-            ext_uart_tx_start <= 1'b0;
-            ext_uart_tx <= 8'd0;
-        end else if(!ext_uart_tx_busy & !uart_we_n_c) begin 
-            ext_uart_tx <= ext_uart_txbuf_c;
-            ext_uart_tx_start <=1'b1;
-        end else begin 
-            ext_uart_tx_start <= 1'b0;
-        end
-    end
+    // always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去
+    //     if (rst_i) begin
+    //         ext_uart_tx_start <= 1'b0;
+    //         ext_uart_tx <= 8'd0;
+    //     end else if(!ext_uart_tx_busy & !uart_we_n_c) begin 
+    //         ext_uart_tx <= ext_uart_txbuf_c;
+    //         ext_uart_tx_start <=1'b1;
+    //     end else begin 
+    //         ext_uart_tx_start <= 1'b0;
+    //     end
+    // end
 
 
     assign ext_uart_rxbuf_c = ext_uart_rxbuf;
