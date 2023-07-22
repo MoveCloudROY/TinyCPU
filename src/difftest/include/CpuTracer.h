@@ -11,6 +11,7 @@
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 #include "Structs.h"
+#include "PerfTracer.h"
 
 
 namespace difftest {
@@ -67,6 +68,8 @@ public:
 
         update_tx(top->txd_o, top->rootp->top__DOT__ext_uart_t__DOT__BitTick);
         nowStatus = afterCallback();
+
+        perfTracer.tick(lastStatus.pc != nowStatus.pc);
 
         if (lastStatus.pc != nowStatus.pc) {
             recentStatus = GeneralStatus{lastStatus.pc, getGprCallback()};
@@ -171,6 +174,7 @@ public:
     std::queue<char>          txBuf;
     GeneralStatus             recentStatus;
     std::queue<GeneralStatus> history;
+    difftest::PerfTracer      perfTracer;
 
 private:
     std::unique_ptr<VerilatedContext>             context;

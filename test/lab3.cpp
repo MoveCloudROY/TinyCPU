@@ -5,7 +5,6 @@
 
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
-#include "PerfTracer.h"
 #include "Tools.h"
 #include "ThreadRaii.h"
 #include "Structs.h"
@@ -58,8 +57,6 @@ int test_main(int argc, char **argv) {
 
     // freopen("trace.txt", "w", stdout);
 
-    // 性能计数器
-    difftest::PerfTracer perfTracer;
     // 初始化 CPU
     srand(time(0));
     difftest::CpuTracer<Vtop, CpuStatus> cpu{argc, argv};
@@ -131,8 +128,6 @@ int test_main(int argc, char **argv) {
 
         serial_scanf(cpu, cpuRef);
 
-        perfTracer.tick(cpu.lastStatus.pc != cpu.nowStatus.pc);
-
         //考虑有效性，当 PC 发生变更，则有效
         if (cpu.lastStatus.pc != cpu.nowStatus.pc) {
 
@@ -202,7 +197,7 @@ int test_main(int argc, char **argv) {
 
         // if (StayCnt >= 10) {
         //     print_info("Pass the DiffTest!");
-        //     perfTracer.print();
+        //     cpu.perfTracer.print();
         //     print_ext(cpu, cpuRef);
         //     return 0;
         //     break;
