@@ -129,37 +129,7 @@ int test_main(int argc, char **argv) {
         // Prac CPU 步进
         cpu.step();
 
-        bool waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-        // print_d(CTL_LIGHTBLUE, "PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-        /*
-            串口等待处理:
-                1. 检测是否进入串口发送完毕等待循环，判断当前访问地址为 UART_CTL_ADDR & uart_tx_busy
-                2. 等待串口发送完毕
-                3. 同步 Prac CPU和 Ref CPU
-        */
-        if (waitingUartTx) {
-            // Ref CPU 进行取串口数据指令
-            cpuRef.step();
-            // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-            // 等待数据读取完成，并执行完当前指令
-            while (cpu.lastStatus.uartTxBusy || cpu.lastStatus.pc == cpu.nowStatus.pc) {
-                cpu.step();
-
-                waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-
-                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-            }
-
-            cpu.step();
-            waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-
-            while (cpu.lastStatus.pc != cpuRef.get_pc()) {
-                cpu.step();
-                waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-                // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-            }
-        }
-
+        serial_scanf(cpu, cpuRef);
 
         perfTracer.tick(cpu.lastStatus.pc != cpu.nowStatus.pc);
 
@@ -224,8 +194,7 @@ int test_main(int argc, char **argv) {
         }
 
         if (sendFlag) {
-            cpuRef.uart.putc(sendChar);
-            uart_putc(cpu, cpuRef, sendChar);
+            serial_print(cpu, cpuRef, sendChar);
             sendFlag = false;
         }
 

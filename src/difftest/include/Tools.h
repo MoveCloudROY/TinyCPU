@@ -65,44 +65,6 @@ inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &r
 
 
 template <typename T>
-void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
-    auto cpu_step5208 = [&]() {for (int _ = 0; _ < 1; ++_) cpu.step(); };
-    // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go into UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-    // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
-    // Start bit
-    cpu->rxd_i        = 0;
-    cpu_step5208();
-    // Data bit
-    for (int i = 0; i < 8 && !cpu.lastStatus.uartRxReady; ++i) {
-        cpu->rxd_i = (ch >> i) & 0x01;
-        cpu_step5208();
-        bool waitingUartRx = !cpu.lastStatus.uartRxReady && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "send 0x%01X in %c at [%d]", (ch >> i) & 0x01, ch, i);
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "rxd_i: 0x%01X", cpu->rxd_i);
-    }
-    // End bit
-    cpu->rxd_i = 1;
-    cpu_step5208();
-
-    // CPU 完成 load，并执行完当前指令
-    while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
-        cpu.step();
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-    }
-    cpu.step();
-
-    // 同步至 CpuRef
-    while (cpu.lastStatus.pc != cpuRef.get_pc()) {
-        cpuRef.step();
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-    }
-    return;
-}
-
-
-template <typename T>
 void print_ext(T &cpu, difftest::CpuRefImpl &cpuRef) {
     print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
     print_info("ExtRAM 0x0 ~ 0x100");
@@ -183,8 +145,80 @@ inline bool ramdom_init_ext(const char *path) {
 }
 
 template <typename T>
-void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data) {
-    cpu += 20; // delay
+void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
+    bool waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+    // print_d(CTL_LIGHTBLUE, "PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    /*
+            串口等待处理:
+                1. 检测是否进入串口发送完毕等待循环，判断当前访问地址为 UART_CTL_ADDR & uart_tx_busy
+                2. 等待串口发送完毕
+                3. 同步 Prac CPU和 Ref CPU
+        */
+    if (waitingUartTx) {
+        // Ref CPU 进行取串口数据指令
+        cpuRef.step();
+        // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Start Deal -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        // 等待数据读取完成，并执行完当前指令
+        while (cpu.lastStatus.uartTxBusy || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+            cpu.step();
+
+            waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+
+            // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Waiting TX -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        }
+
+        cpu.step();
+        waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+
+        while (cpu.lastStatus.pc != cpuRef.get_pc()) {
+            cpu.step();
+            waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+            // print_d(CTL_LIGHTBLUE, "[UART] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        }
+    }
+}
+
+
+template <typename T>
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
+    auto cpu_step5208 = [&]() {for (int _ = 0; _ < 1; ++_) cpu.step(); };
+    // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go into UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
+    // Start bit
+    cpu->rxd_i        = 0;
+    cpu_step5208();
+    // Data bit
+    for (int i = 0; i < 8 && !cpu.lastStatus.uartRxReady; ++i) {
+        cpu->rxd_i = (ch >> i) & 0x01;
+        cpu_step5208();
+        bool waitingUartRx = !cpu.lastStatus.uartRxReady && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "send 0x%01X in %c at [%d]", (ch >> i) & 0x01, ch, i);
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "rxd_i: 0x%01X", cpu->rxd_i);
+    }
+    // End bit
+    cpu->rxd_i = 1;
+    cpu_step5208();
+
+    // CPU 完成 load，并执行完当前指令
+    while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+        cpu.step();
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+    cpu.step();
+
+    // 同步至 CpuRef
+    while (cpu.lastStatus.pc != cpuRef.get_pc()) {
+        cpuRef.step();
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+    return;
+}
+
+template <typename T>
+void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data, size_t delay = 0) {
+    cpu += delay; // delay
     cpuRef.uart.putc(data);
     uart_putc(cpu, cpuRef, data);
 }
@@ -193,7 +227,7 @@ template <typename T, typename Td>
 void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
     constexpr size_t size = sizeof(Td);
     for (size_t i = 0; i < size; ++i) {
-        serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF);
+        serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF, 20);
     }
 }
 
