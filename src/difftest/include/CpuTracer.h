@@ -106,6 +106,14 @@ public:
             return EOF;
     }
 
+    void sleep(size_t cycles) {
+        while (cycles--)
+            step();
+    }
+
+    void operator+=(int step) {
+        sleep(step);
+    }
 
     T *operator->() {
         return top;

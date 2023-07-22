@@ -6,7 +6,7 @@
 // TX: 8-bit data, 2 stop, no-parity
 // RX: 8-bit data, 1 stop, no-parity (the receiver can accept more stop bits of course)
 
-// `define SIMULATION   // in this mode, TX outputs one bit per clock cycle
+`define SIMULATION   // in this mode, TX outputs one bit per clock cycle
                        // and RX receives one bit per clock cycle (for fast simulations)
 
 ////////////////////////////////////////////////////////
@@ -31,7 +31,8 @@ parameter Baud = 115200;
 
 ////////////////////////////////
 `ifdef SIMULATION
-wire BitTick = 1'b1/* verilator public_flat */;  // output one bit per clock cycle
+wire BitTick /* verilator public_flat */;  // output one bit per clock cycle
+assign BitTick = 1'b1;
 `else
 wire BitTick/* verilator public_flat */;
 BaudTickGen #(ClkFrequency, Baud) tickgen(.clk(clk), .enable(TxD_busy), .tick(BitTick));

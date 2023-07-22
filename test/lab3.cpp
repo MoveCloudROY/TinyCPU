@@ -1,3 +1,5 @@
+#include <utility>
+#include <vector>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
@@ -35,6 +37,9 @@
 // 参考实现缓冲队列
 constexpr const size_t Q_SIZE = 5;
 
+const char *bootMessage = "MONITOR for Loongarch32 - initialized.";
+
+
 std::queue<Status> inst_done_q;
 std::queue<Status> inst_ref_q;
 
@@ -46,7 +51,13 @@ struct CpuStatus {
     uint32_t uartRxReady;
 };
 
+
 int test_main(int argc, char **argv) {
+
+    /*=========================================================================*/
+    //                               初始化开始
+    /*=========================================================================*/
+
     srand(time(0));
     // 初始化 ExtRam
     ramdom_init_ext(LOONG_DBIN_PATH);
@@ -60,8 +71,7 @@ int test_main(int argc, char **argv) {
     srand(time(0));
     difftest::CpuTracer<Vtop, CpuStatus> cpu{argc, argv};
 
-    // CpuStatus cpu.lastStatus{};
-    // CpuStatus cpu.nowStatus{};
+    // CPU 监控状态回调
     auto updateFunc = [&]() -> CpuStatus {
         return {
             cpu->rootp->top__DOT__mem2wb_bus_r[0],
@@ -72,6 +82,7 @@ int test_main(int argc, char **argv) {
 
         };
     };
+    // 注册回调
     cpu.register_beforeCallback(updateFunc);
     cpu.register_afterCallback(updateFunc);
 
@@ -83,7 +94,7 @@ int test_main(int argc, char **argv) {
     // 初始化参考实现
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, LOONG_DBIN_PATH, 0, 0, true, false};
 
-
+    // 串口输入模拟线程
     ThreadRaii uart_input_thread{[&]() {
         termios tmp;
         tcgetattr(STDIN_FILENO, &tmp);
@@ -95,28 +106,26 @@ int test_main(int argc, char **argv) {
             if (c == 10)
                 c = 13; // convert lf to cr
 
-            // cpuRef.uart.putc(c);
-            // uart_putc(cpu, cpuRef, c);
             sendChar = c;
             sendFlag = true;
         }
     }};
 
-
     bool   running = true;
     size_t StayCnt = 0;
-    ;
+
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
+
+    /*=========================================================================*/
+    //                               初始化结束
+    /*=========================================================================*/
+
+
     while (running) {
-        // Main thread input handling
-        // std::unique_lock<std::mutex> lock(cpuRef.mtx);
-        // cpuRef.cv.wait(lock); // Wait for notification from the UART input thread
-        // Continue with main thread logic here
 
-
-        // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
+        // Prac CPU 步进
         cpu.step();
 
         bool waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
@@ -236,8 +245,8 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
-            cpuRef.uart.putc('T');
-            uart_putc(cpu, cpuRef, 'T');
+            sendA(cpu, cpuRef);
+            sendD(cpu, cpuRef);
         }
 
         if (sendFlag) {
@@ -248,13 +257,13 @@ int test_main(int argc, char **argv) {
 
         running = !cpuRef.is_finished();
 
-        if (StayCnt >= 10) {
-            print_info("Pass the DiffTest!");
-            perfTracer.print();
-            print_ext(cpu, cpuRef);
-            return 0;
-            break;
-        }
+        // if (StayCnt >= 10) {
+        //     print_info("Pass the DiffTest!");
+        //     perfTracer.print();
+        //     print_ext(cpu, cpuRef);
+        //     return 0;
+        //     break;
+        // }
         auto endTime = std::chrono::high_resolution_clock::now();
         auto during  = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
         // if (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() % 100 == 0) {
@@ -275,7 +284,7 @@ int test_main(int argc, char **argv) {
 }
 
 
-TEST_CASE("lab2") {
-    char argv[] = {"lab2"};
+TEST_CASE("lab3") {
+    char argv[] = {"lab3"};
     REQUIRE(test_main(0, (char **)argv) == 0);
 }

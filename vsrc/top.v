@@ -109,7 +109,7 @@ module top (
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
-    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in & lsu_resp_c)) ;
+    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in & ( ~(dm_we_c | dm_re_c) | lsu_resp_c) )) ;
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
 
 
@@ -494,7 +494,8 @@ module top (
             .TxD_busy(ext_uart_tx_busy)           //发送器忙状态指示
         );
 
-
+    wire uart_is_load_data;
+    assign uart_is_load_data = (dm_addr_c == 32'hbfd003f8);
     assign ext_uart_rx_clear = ext_uart_rx_ready; //收到数据的同时，清除标志，因为数据已取到ext_uart_buffer中
     always @(posedge clk_i) begin         //接收到缓冲区ext_uart_buffer
         if (rst_i) begin
@@ -503,9 +504,9 @@ module top (
         end else if(ext_uart_rx_ready) begin
             ext_uart_rxbuf <= ext_uart_rx;
             ext_uart_avai <= 1'b1;
-        end /* else if(ext_uart_avai & !uart_re_n_c) begin 
+        end else if(ext_uart_avai & !uart_re_n_c & ctl_mem_over & uart_is_load_data) begin 
             ext_uart_avai <= 0;
-        end */
+        end
     end
 
     // always @(posedge clk_i) begin         //将缓冲区ext_uart_buffer发送出去

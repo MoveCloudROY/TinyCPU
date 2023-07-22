@@ -40,7 +40,7 @@ CpuRefImpl::CpuRefImpl(std::string cpath, std::string dpath, size_t cstart_addr,
     if (dpath != "")
         data_mem1.load_binary(0x0400000 + dstart_addr, dpath.c_str());
 
-    assert(mmio.add_dev(0x00000000, 0x100000, &func_mem));
+    assert(mmio.add_dev(0x00000000, 0x1000000, &func_mem));
     // assert(mmio.add_dev(0x00000000, 0x1000000, &data_mem0));
     assert(mmio.add_dev(0x80000000, 0x1000000, &data_mem1));
     assert(mmio.add_dev(0x90000000, 0x1000000, &data_mem2));
@@ -83,5 +83,8 @@ std::array<uint32_t, 32> CpuRefImpl::get_gpr() {
     return ret;
 }
 
+uint32_t CpuRefImpl::get_inst() {
+    return core.instr.dbg_inst;
+}
 
 } // namespace difftest

@@ -31,6 +31,8 @@ public:
 
     std::array<uint32_t, 32> get_gpr();
 
+    uint32_t get_inst();
+
 
 private:
 public:

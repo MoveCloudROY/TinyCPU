@@ -308,7 +308,7 @@ int test_main(int argc, char **argv) {
 }
 
 
-TEST_CASE("lab2") {
-    char argv[] = {"lab2"};
+TEST_CASE("lab1") {
+    char argv[] = {"lab1"};
     REQUIRE(test_main(0, (char **)argv) == 0);
 }

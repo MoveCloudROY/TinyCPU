@@ -66,10 +66,10 @@ module bridge (
     wire ifu_tar_base, ifu_tar_ext;
     wire lsu_tar_base, lsu_tar_ext, lsu_tar_uart;
 `ifdef VERILATOR 
-    assign ifu_tar_base = (ifu_addr_i[31:22] == 0'b0000000000) & ifu_req_i;
-    assign ifu_tar_ext  = (ifu_addr_i[31:22] == 0'b1000000001) & ifu_req_i;
-    assign lsu_tar_base = (lsu_addr_i[31:22] == 0'b0000000000) & lsu_req_i;
-    assign lsu_tar_ext  = (lsu_addr_i[31:22] == 0'b1000000001) & lsu_req_i;
+    assign ifu_tar_base = ((ifu_addr_i[31:22] == 0'b0000000000) | (ifu_addr_i[31:22] == 0'b1000000000)) & ifu_req_i;
+    assign ifu_tar_ext  = ((ifu_addr_i[31:22] == 0'b0000000001) | (ifu_addr_i[31:22] == 0'b1000000001)) & ifu_req_i;
+    assign lsu_tar_base = ((lsu_addr_i[31:22] == 0'b0000000000) | (lsu_addr_i[31:22] == 0'b1000000000)) & lsu_req_i;
+    assign lsu_tar_ext  = ((lsu_addr_i[31:22] == 0'b0000000001) | (lsu_addr_i[31:22] == 0'b1000000001)) & lsu_req_i;
     assign lsu_tar_uart = (lsu_addr_i[31:22] == 0'b1011111111) & lsu_req_i;
 `else
     assign ifu_tar_base = (ifu_addr_i[31:22] == 0'b1000000000) & ifu_req_i;
@@ -84,7 +84,7 @@ module bridge (
         |   ( ~lsu_tar_ext  &  lsu_tar_uart &  lsu_req_i )
     ));
 
-    assign lsu_resp_o = ~lsu_req_i | (ifu_tar_base & lsu_req_i & (
+    assign lsu_resp_o = (ifu_tar_base & lsu_req_i & (
             (  lsu_tar_base & ~lsu_tar_ext  & ~lsu_tar_uart )
         |   ( ~lsu_tar_base &  lsu_tar_ext  & ~lsu_tar_uart )
         |   ( ~lsu_tar_base & ~lsu_tar_ext  &  lsu_tar_uart )
