@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <cstdint>
 #include <cstdio>
 #include <device/uartsim.hpp>
 #include <cstddef>
@@ -8,6 +10,7 @@
 #include <functional>
 #include "verilated.h"
 #include "verilated_vcd_c.h"
+#include "Structs.h"
 
 
 namespace difftest {
@@ -15,8 +18,9 @@ namespace difftest {
 template <typename T, typename TStatus>
 class CpuTracer {
 public:
-    CpuTracer(int argc, char **argv)
-        : context{std::make_unique<VerilatedContext>()} {
+    CpuTracer(int argc, char **argv, size_t historySize = 5)
+        : context{std::make_unique<VerilatedContext>()}
+        , historySize{historySize} {
         context->commandArgs(argc, argv);
         top = new T{context.get()};
     }
@@ -61,16 +65,15 @@ public:
             tfp->flush();
         }
 
-        // // Now the negative edge
-        // context->timeInc(1);
-        // top->clk_i = 0;
-        // top->eval();
-        // if (wave_on) {
-        //     tfp->dump(context->time());
-        //     tfp->flush();
-        // }
         update_tx(top->txd_o, top->rootp->top__DOT__ext_uart_t__DOT__BitTick);
         nowStatus = afterCallback();
+
+        if (lastStatus.pc != nowStatus.pc) {
+            recentStatus = GeneralStatus{lastStatus.pc, getGprCallback()};
+            history.push(recentStatus);
+            if (history.size() > historySize)
+                history.pop();
+        }
     }
 
     void reset_all() {
@@ -91,6 +94,9 @@ public:
     }
     void register_afterCallback(std::function<TStatus(void)> afterCallback_t) {
         afterCallback = afterCallback_t;
+    }
+    void register_getGprCallback(std::function<std::array<uint32_t, 32>(void)> getGprCallback_t) {
+        getGprCallback = getGprCallback_t;
     }
 
     bool exist_tx() {
@@ -160,18 +166,22 @@ private:
 
 
 public:
-    TStatus          lastStatus{}, nowStatus{};
-    char             txTerm;
-    std::queue<char> txBuf;
-
+    TStatus                   lastStatus{}, nowStatus{};
+    char                      txTerm;
+    std::queue<char>          txBuf;
+    GeneralStatus             recentStatus;
+    std::queue<GeneralStatus> history;
 
 private:
-    std::unique_ptr<VerilatedContext> context;
-    T                                *top;
-    std::unique_ptr<VerilatedVcdC>    tfp;
-    std::function<TStatus(void)>      beforeCallback;
-    std::function<TStatus(void)>      afterCallback;
-    bool                              wave_on;
+    std::unique_ptr<VerilatedContext>             context;
+    T                                            *top;
+    std::unique_ptr<VerilatedVcdC>                tfp;
+    std::function<TStatus(void)>                  beforeCallback;
+    std::function<TStatus(void)>                  afterCallback;
+    std::function<std::array<uint32_t, 32>(void)> getGprCallback;
+    bool                                          wave_on;
+
+    size_t historySize;
 };
 
 } // namespace difftest

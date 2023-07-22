@@ -1,5 +1,5 @@
 #include "PerfTracer.h"
-#include "tools.h"
+#include "defines.h"
 
 namespace difftest {
 

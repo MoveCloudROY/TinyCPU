@@ -1,6 +1,5 @@
 #include "CpuRefImpl.h"
 #include "device/uart8250.hpp"
-#include "tools.h"
 #include <array>
 #include <cstdint>
 #include <iterator>
@@ -11,29 +10,15 @@
 
 namespace difftest {
 
-// static void uart_input(uart8250 &uart) {
-//     termios tmp;
-//     tcgetattr(STDIN_FILENO, &tmp);
-//     tmp.c_lflag &= (~ICANON & ~ECHO);
-//     tcsetattr(STDIN_FILENO, TCSANOW, &tmp);
-//     while (true) {
-//         char c = getchar();
-//         if (c == 10)
-//             c = 13; // convert lf to cr
-//         uart.putc(c);
-//     }
-// }
 
-
-CpuRefImpl::CpuRefImpl(std::string cpath, std::string dpath, size_t cstart_addr, size_t dstart_addr, bool device_sim_t, bool trace_t)
+CpuRefImpl::CpuRefImpl(std::string cpath, std::string dpath, size_t cstart_addr, size_t dstart_addr, bool device_sim_t, bool trace_t, size_t historySize)
     : device_sim{device_sim_t}
     , trace{trace_t}
     , mmio{}
     , confreg{device_sim}
     , core{0, mmio, trace, 0}
     , uart{}
-    , mtx{}
-    , cv{} {
+    , historySize{historySize} {
 
     func_mem.load_binary(cstart_addr, cpath.c_str());
     func_mem.set_allow_warp(true);
@@ -62,7 +47,12 @@ void CpuRefImpl::operator+=(int step) {
 }
 
 void CpuRefImpl::step() {
+    auto refLastPc = get_pc();
     core.step();
+    recentStatus = GeneralStatus{refLastPc, get_gpr()};
+    history.push(recentStatus);
+    if (history.size() > historySize)
+        history.pop();
 }
 
 bool CpuRefImpl::is_finished() {

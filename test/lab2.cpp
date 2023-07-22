@@ -4,12 +4,13 @@
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
 #include "PerfTracer.h"
-#include "Status.h"
+#include "Tools.h"
 #include "ThreadRaii.h"
+#include "Structs.h"
 
 #include "Vtop.h"
 #include "Vtop___024root.h"
-#include "tools.h"
+#include "defines.h"
 
 #include <array>
 #include <bits/chrono.h>
@@ -32,11 +33,6 @@
 #include <fstream>
 #include <termios.h>
 
-// 参考实现缓冲队列
-constexpr const size_t Q_SIZE = 5;
-
-std::queue<Status> inst_done_q;
-std::queue<Status> inst_ref_q;
 
 struct CpuStatus {
     uint32_t pc;
@@ -74,6 +70,15 @@ int test_main(int argc, char **argv) {
     };
     cpu.register_beforeCallback(updateFunc);
     cpu.register_afterCallback(updateFunc);
+    cpu.register_getGprCallback([&]() {
+        std::array<uint32_t, 32> gpr;
+        std::copy(
+            std::begin(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
+            std::end(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
+            gpr.begin()
+        );
+        return gpr;
+    });
 
     cpu.enable_trace("top.vcd");
     cpu.reset_all();
@@ -105,18 +110,11 @@ int test_main(int argc, char **argv) {
 
     bool   running = true;
     size_t StayCnt = 0;
-    ;
 
     auto startTime = std::chrono::high_resolution_clock::now();
 
     while (running) {
-        // Main thread input handling
-        // std::unique_lock<std::mutex> lock(cpuRef.mtx);
-        // cpuRef.cv.wait(lock); // Wait for notification from the UART input thread
-        // Continue with main thread logic here
-
-
-        // 获得当前 pc 和 上一个 pc 完成时的 GPR 状态
+        // Prac CPU 步进
         cpu.step();
 
         bool waitingUartTx = cpu.lastStatus.uartTxBusy && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
@@ -150,59 +148,34 @@ int test_main(int argc, char **argv) {
             }
         }
 
-        std::array<uint32_t, 32> gpr;
-        std::copy(
-            std::begin(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
-            std::end(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
-            gpr.begin()
-        );
-
-        auto lastPcStatus = Status{cpu.lastStatus.pc, gpr};
-
-        perfTracer.tick(lastPcStatus.pc != cpu.nowStatus.pc);
+        perfTracer.tick(cpu.lastStatus.pc != cpu.nowStatus.pc);
 
         //考虑有效性，当 PC 发生变更，则有效
-        if (lastPcStatus.pc != cpu.nowStatus.pc) {
+        if (cpu.lastStatus.pc != cpu.nowStatus.pc) {
 
             debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 
             StayCnt = 0;
-            // 将上一个 pc状态压入
-            inst_done_q.push(lastPcStatus);
 
-            // 取参考实现的状态
-            auto refLastPc = cpuRef.get_pc();
+            // 参考实现步进
             cpuRef.step();
-            auto cpuRefStatus = Status{refLastPc, cpuRef.get_gpr()};
-            // 压入状态参考队列
-            inst_ref_q.push(cpuRefStatus);
-
-            // 状态队列维护
-            if (inst_done_q.size() > Q_SIZE)
-                inst_done_q.pop();
-            if (inst_ref_q.size() > Q_SIZE)
-                inst_ref_q.pop();
-            // debug("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
-            // debug("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
-            // debug("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
-            // debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
-            if (!compare_status(lastPcStatus, cpuRefStatus, cpu)) {
+            if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
                 // for (int k = 0; k < 10; ++k)
                 //     cpu.step();
                 // 错误时，打印出历史记录
                 std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
-                while (!inst_done_q.empty()) {
+                while (!cpu.history.empty()) {
                     debug("===============================");
-                    auto s = inst_done_q.front();
-                    inst_done_q.pop();
+                    auto s = cpu.history.front();
+                    cpu.history.pop();
                     print_d(CTL_PUP, "[Prac CPU]");
                     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
                     print_gpr(s.gpr);
                     print_d(CTL_RESET, "--------------------------------------");
-                    auto s_ref = inst_ref_q.front();
-                    inst_ref_q.pop();
+                    auto s_ref = cpuRef.history.front();
+                    cpuRef.history.pop();
                     print_d(CTL_PUP, "[Ref CPU]");
                     print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
                     print_gpr(s_ref.gpr);
@@ -257,11 +230,7 @@ int test_main(int argc, char **argv) {
         }
         auto endTime = std::chrono::high_resolution_clock::now();
         auto during  = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
-        // if (std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime).count() % 100 == 0) {
-        //     debug("[UART.RX] rx.empty: %d", cpuRef.uart.rx.empty());
-        //     // while (!cpuRef.uart.rx.empty())
-        //     //     cpuRef.uart.rx.pop();
-        // }
+
         if (during > 100) {
             print_err("CPU emulation timeout!");
             print_ext(cpu, cpuRef);
@@ -270,8 +239,6 @@ int test_main(int argc, char **argv) {
     }
     print_ext(cpu, cpuRef);
     return 0;
-    // std::cout << "=====================" << std::endl;
-    // std::cout << "Totally Step: " << stepCnt << std::endl;
 }
 
 

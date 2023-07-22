@@ -1,11 +1,11 @@
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
 #include "PerfTracer.h"
-#include "Status.h"
+#include "Tools.h"
 
 #include "Vtop.h"
 #include "Vtop___024root.h"
-#include "tools.h"
+#include "defines.h"
 
 #include <array>
 #include <cstddef>
@@ -30,8 +30,6 @@ constexpr const size_t Q_SIZE = 10;
 std::queue<Status> inst_done_q;
 std::queue<Status> inst_ref_q;
 
-constexpr const uint32_t UART_DATA_ADDR = 0xbfd003f8;
-constexpr const uint32_t UART_CTL_ADDR  = 0xbfd003fC;
 
 struct CpuStatus {
     uint32_t pc;
