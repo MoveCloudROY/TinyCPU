@@ -302,30 +302,6 @@ void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
             cpuRef.stop_record();
             cpu.stop_record();
             forward_compare(cpu, cpuRef, 0);
-            // if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu, 0)) {
-            //     print_history(cpu, cpuRef);
-            // }
-            // print_dbg("PC 0x%08X", cpu.recentStatus.pc);
-            // print_gpr(cpu.recentStatus.gpr);
-            // print_d(CTL_PUP, "[Ref CPU Record] ==================  Start  ================" CTL_RESET);
-            // while (!cpuRef.record.empty()) {
-            //     auto s = cpuRef.record.front();
-            //     cpuRef.record.pop();
-            //     print_d(CTL_PUP, "[Ref CPU]");
-            //     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
-            //     print_gpr(s.gpr);
-            // }
-            // print_d(CTL_PUP, "[Ref CPU Record] ==================   End   ================" CTL_RESET);
-
-            // print_d(CTL_PUP, "[Prac CPU Record] ==================  Start  ================" CTL_RESET);
-            // while (!cpu.record.empty()) {
-            //     auto s = cpu.record.front();
-            //     cpu.record.pop();
-            //     print_d(CTL_PUP, "[Prac CPU]");
-            //     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
-            //     print_gpr(s.gpr);
-            // }
-            // print_d(CTL_PUP, "[Prac CPU Record] ==================   End   ================" CTL_RESET);
             exit(0);
         }
 
