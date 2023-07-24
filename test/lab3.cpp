@@ -34,6 +34,7 @@
 #include <fstream>
 #include <termios.h>
 
+constexpr size_t TRACE_DEEP = 10;
 
 struct CpuStatus {
     uint32_t pc;
@@ -59,7 +60,7 @@ int test_main(int argc, char **argv) {
 
     // 初始化 CPU
     srand(time(0));
-    difftest::CpuTracer<Vtop, CpuStatus> cpu{argc, argv};
+    difftest::CpuTracer<Vtop, CpuStatus> cpu{argc, argv, TRACE_DEEP};
 
     // CPU 监控状态回调
     auto updateFunc = [&]() -> CpuStatus {
@@ -91,7 +92,16 @@ int test_main(int argc, char **argv) {
     bool sendFlag = false;
     char sendChar = ' ';
     // 初始化参考实现
-    difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, LOONG_DBIN_PATH, 0, 0, true, false};
+    difftest::CpuRefImpl cpuRef{
+        LOONG_BIN_PATH,
+        LOONG_DBIN_PATH,
+        0,
+        0,
+        true,
+        false,
+        TRACE_DEEP
+
+    };
 
     // 串口输入模拟线程
     ThreadRaii uart_input_thread{[&]() {
@@ -101,7 +111,7 @@ int test_main(int argc, char **argv) {
         tcsetattr(STDIN_FILENO, TCSANOW, &tmp);
         while (true) {
             char c = getchar();
-            debug("[UART] rx: %c", c);
+            print_dbg("[UART] rx: %c", c);
             if (c == 10)
                 c = 13; // convert lf to cr
 
@@ -131,7 +141,7 @@ int test_main(int argc, char **argv) {
         //考虑有效性，当 PC 发生变更，则有效
         if (cpu.lastStatus.pc != cpu.nowStatus.pc) {
 
-            debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+            print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 
             StayCnt = 0;
 
@@ -140,21 +150,8 @@ int test_main(int argc, char **argv) {
 
             // 比较状态
             if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
-                std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
-                while (!cpu.history.empty()) {
-                    debug("===============================");
-                    auto s = cpu.history.front();
-                    cpu.history.pop();
-                    print_d(CTL_PUP, "[Prac CPU]");
-                    print_d(CTL_PUP, "PC: 0x%08X", s.pc);
-                    print_gpr(s.gpr);
-                    print_d(CTL_RESET, "--------------------------------------");
-                    auto s_ref = cpuRef.history.front();
-                    cpuRef.history.pop();
-                    print_d(CTL_PUP, "[Ref CPU]");
-                    print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
-                    print_gpr(s_ref.gpr);
-                }
+
+                print_history(cpu, cpuRef);
                 print_ext(cpu, cpuRef);
                 return 1;
                 break;

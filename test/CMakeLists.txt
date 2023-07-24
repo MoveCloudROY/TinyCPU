@@ -24,9 +24,9 @@ target_compile_definitions(test_lab3 PRIVATE -DLOONG_BIN_PATH="${LOONG_LAB3_BIN_
 target_compile_definitions(test_lab3 PRIVATE -DLOONG_DBIN_PATH="${LOONG_LAB3_DBIN_PATH}")
 target_link_libraries(test_lab3 PUBLIC vsrc_lab3)
 
-# target_compile_options(test_lab2 PRIVATE -fno-omit-frame-pointer)
-# target_compile_options(test_lab2 PRIVATE -fsanitize=address)
-# target_link_options(test_lab2 PRIVATE -fsanitize=address)
+target_compile_options(test_lab3 PRIVATE -fno-omit-frame-pointer)
+target_compile_options(test_lab3 PRIVATE -fsanitize=address)
+target_link_options(test_lab3 PRIVATE -fsanitize=address)
 
 add_test(NAME lab1 COMMAND test_lab1)
 add_test(NAME lab2 COMMAND test_lab2)

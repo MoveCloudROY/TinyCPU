@@ -13,11 +13,6 @@ using std::bitset;
 
 #define MAX_TEST 1000000
 
-// clang-format off
-#define print_err(fmt, args...) printf("\033[31;1m" fmt "\033[0m\n", ##args)
-#define print_info(fmt, args...) printf("\033[33;1m" fmt "\033[0m\n", ##args)
-#define debug(fmt, args...) printf("\033[32;1m" "[DEBUG] %s:%d:%s" "\033[0m  "  fmt "\n", __FILE_NAME__, __LINE__, __func__, ##args)
-// clang-format on
 
 #define U8H(x) (int8_t)((int8_t)((x) >> 4) & 0x0F)
 #define U8L(x) (int8_t)((int8_t)(x)&0x0F)

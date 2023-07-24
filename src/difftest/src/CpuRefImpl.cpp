@@ -43,7 +43,7 @@ CpuRefImpl::~CpuRefImpl() {
 
 void CpuRefImpl::operator+=(int step) {
     while (step--)
-        core.step();
+        this->step();
 }
 
 void CpuRefImpl::step() {
@@ -53,6 +53,8 @@ void CpuRefImpl::step() {
     history.push(recentStatus);
     if (history.size() > historySize)
         history.pop();
+    if (isRecording)
+        record.push(recentStatus);
 }
 
 bool CpuRefImpl::is_finished() {

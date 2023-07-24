@@ -94,7 +94,7 @@ int test_main(int argc, char **argv) {
         tcsetattr(STDIN_FILENO, TCSANOW, &tmp);
         while (true) {
             char c = getchar();
-            debug("[UART] rx: %c", c);
+            print_dbg("[UART] rx: %c", c);
             if (c == 10)
                 c = 13; // convert lf to cr
 
@@ -120,7 +120,7 @@ int test_main(int argc, char **argv) {
         //考虑有效性，当 PC 发生变更，则有效
         if (cpu.lastStatus.pc != cpu.nowStatus.pc) {
 
-            debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+            print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 
             StayCnt = 0;
 
@@ -131,7 +131,7 @@ int test_main(int argc, char **argv) {
             if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
                 std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
                 while (!cpu.history.empty()) {
-                    debug("===============================");
+                    print_dbg("===============================");
                     auto s = cpu.history.front();
                     cpu.history.pop();
                     print_d(CTL_PUP, "[Prac CPU]");

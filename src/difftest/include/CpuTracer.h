@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <functional>
+#include "defines.h"
 #include "verilated.h"
 #include "verilated_vcd_c.h"
 #include "Structs.h"
@@ -76,6 +77,8 @@ public:
             history.push(recentStatus);
             if (history.size() > historySize)
                 history.pop();
+            if (isRecording)
+                record.push(recentStatus);
         }
     }
 
@@ -118,6 +121,17 @@ public:
     void sleep(size_t cycles) {
         while (cycles--)
             step();
+    }
+
+    void start_record() {
+        print_d(CTL_PUP, "[prac CPU Record] Start Record " CTL_RESET);
+        isRecording = 1;
+        while (!record.empty())
+            record.pop();
+    }
+    void stop_record() {
+        isRecording = 0;
+        print_d(CTL_PUP, "[Prac CPU Record] Stop Record " CTL_RESET);
     }
 
     void operator+=(int step) {
@@ -176,6 +190,8 @@ public:
     std::queue<GeneralStatus> history;
     difftest::PerfTracer      perfTracer;
 
+    std::queue<GeneralStatus> record;
+
 private:
     std::unique_ptr<VerilatedContext>             context;
     T                                            *top;
@@ -184,8 +200,8 @@ private:
     std::function<TStatus(void)>                  afterCallback;
     std::function<std::array<uint32_t, 32>(void)> getGprCallback;
     bool                                          wave_on;
-
-    size_t historySize;
+    bool                                          isRecording;
+    size_t                                        historySize;
 };
 
 } // namespace difftest

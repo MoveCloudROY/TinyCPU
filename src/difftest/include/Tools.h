@@ -18,7 +18,7 @@ constexpr const uint32_t UART_DATA_ADDR = 0xbfd003f8;
 constexpr const uint32_t UART_CTL_ADDR  = 0xbfd003fC;
 
 template <typename T>
-inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &refImpl, T &cpu) {
+inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &refImpl, T &cpu, bool ignoreUart = 1) {
     std::stringstream pracStr, refStr;
 
     bool pc_equ  = (pracImpl.pc == refImpl.pc);
@@ -29,7 +29,7 @@ inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &r
             break;
         }
     }
-    if (pc_equ && (gpr_equ || cpu.lastStatus.targetAddr == UART_CTL_ADDR))
+    if (pc_equ && (gpr_equ || (ignoreUart && (cpu.lastStatus.targetAddr == UART_CTL_ADDR))))
         return true;
 
     if (!pc_equ) {
@@ -113,7 +113,7 @@ inline bool ramdom_init_ext(const char *path) {
     std::ofstream binaryFile(path, std::ios::binary | std::ios::out);
 
     if (!binaryFile.is_open()) {
-        debug("Error opening the file.");
+        print_dbg("Error opening the file.");
         return 0;
     }
 
@@ -142,6 +142,28 @@ inline bool ramdom_init_ext(const char *path) {
     // Close the file
     binaryFile.close();
     return 1;
+}
+
+template <typename T>
+void print_history(T &cpu, difftest::CpuRefImpl &cpuRef) {
+    // auto save = stdout;
+    // freopen("history.txt", "w", stdout);
+    std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
+    while (!cpu.history.empty() && !cpuRef.history.empty()) {
+        print_dbg("===============================");
+        auto s = cpu.history.front();
+        cpu.history.pop();
+        print_d(CTL_PUP, "[Prac CPU]");
+        print_d(CTL_PUP, "PC: 0x%08X", s.pc);
+        print_gpr(s.gpr);
+        print_d(CTL_RESET, "--------------------------------------");
+        auto s_ref = cpuRef.history.front();
+        cpuRef.history.pop();
+        print_d(CTL_PUP, "[Ref CPU]");
+        print_d(CTL_PUP, "PC: 0x%08X", s_ref.pc);
+        print_gpr(s_ref.gpr);
+    }
+    // stdout = save;
 }
 
 template <typename T>
@@ -182,17 +204,17 @@ void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
 template <typename T>
 void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
     auto cpu_step5208 = [&]() {for (int _ = 0; _ < 1; ++_) cpu.step(); };
-    // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go into UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go to UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
     // Start bit
-    cpu->rxd_i        = 0;
+    cpu->rxd_i = 0;
     cpu_step5208();
     // Data bit
     for (int i = 0; i < 8 && !cpu.lastStatus.uartRxReady; ++i) {
         cpu->rxd_i = (ch >> i) & 0x01;
         cpu_step5208();
         bool waitingUartRx = !cpu.lastStatus.uartRxReady && (cpu.nowStatus.targetAddr == UART_CTL_ADDR);
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "PracPc: 0x%08X", cpu.lastStatus.pc);
         // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "send 0x%01X in %c at [%d]", (ch >> i) & 0x01, ch, i);
         // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
         // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "rxd_i: 0x%01X", cpu->rxd_i);
@@ -202,32 +224,116 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
     cpu_step5208();
 
     // CPU 完成 load，并执行完当前指令
-    while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+    while (cpu.nowStatus.uartRxReady /* cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02*/ || cpu.lastStatus.pc == cpu.nowStatus.pc) {
         cpu.step();
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
-    cpu.step();
 
     // 同步至 CpuRef
-    while (cpu.lastStatus.pc != cpuRef.get_pc()) {
+    while (cpu.nowStatus.pc != cpuRef.get_pc()) {
         cpuRef.step();
-        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
     }
     return;
 }
 
 template <typename T>
-void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data, size_t delay = 0) {
-    cpu += delay; // delay
+void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data) {
     cpuRef.uart.putc(data);
     uart_putc(cpu, cpuRef, data);
 }
+
+template <typename T>
+void forward_compare(T &cpu, difftest::CpuRefImpl &cpuRef, int bias) {
+    print_d(CTL_PUP, "[Forward Compare] ==================  Start  ================" CTL_RESET);
+
+    while (bias > 0) {
+        cpu.record.pop();
+        bias--;
+    }
+    while (bias < 0) {
+        cpuRef.record.pop();
+        bias++;
+    }
+    while (!cpu.record.empty() && !cpuRef.record.empty()) {
+        auto s = cpu.record.front();
+        cpu.record.pop();
+        auto sRef = cpuRef.record.front();
+        cpuRef.record.pop();
+
+        print_d(CTL_RED, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" CTL_RESET);
+        print_d(CTL_PUP, "[Ref CPU]");
+        print_d(CTL_PUP, "PC: 0x%08X", sRef.pc);
+        print_gpr(sRef.gpr);
+        print_d(CTL_RED, "===============================================" CTL_RESET);
+        print_d(CTL_PUP, "[Prac CPU]");
+        print_d(CTL_PUP, "PC: 0x%08X", s.pc);
+        print_gpr(s.gpr);
+        print_d(CTL_RED, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" CTL_RESET);
+
+        if (!compare_status(s, sRef, cpu)) {
+            // exit(0);
+        }
+    }
+    print_d(CTL_PUP, "[Forward Compare] ==================   End   ================" CTL_RESET);
+}
+
 
 template <typename T, typename Td>
 void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
     constexpr size_t size = sizeof(Td);
     for (size_t i = 0; i < size; ++i) {
-        serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF, 20);
+        if (data == 0x80100000 && (i == 1)) {
+            cpuRef.start_record();
+            cpu.start_record();
+        }
+        // 多字节发送
+        if (i > 0) {
+            // 等待CPU 完成 load
+            while (cpu.nowStatus.uartRxReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+                cpu.step();
+            }
+        }
+        print_dbg("[RunA] data: 0x%08X, i: %d, byte: 0x%02X", data, (int)i, (data >> (i * 8)) & 0xFF);
+
+
+        serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF);
+        if (data == 0x80100000 && i == 3) {
+            cpuRef.stop_record();
+            cpu.stop_record();
+            forward_compare(cpu, cpuRef, 0);
+            // if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu, 0)) {
+            //     print_history(cpu, cpuRef);
+            // }
+            // print_dbg("PC 0x%08X", cpu.recentStatus.pc);
+            // print_gpr(cpu.recentStatus.gpr);
+            // print_d(CTL_PUP, "[Ref CPU Record] ==================  Start  ================" CTL_RESET);
+            // while (!cpuRef.record.empty()) {
+            //     auto s = cpuRef.record.front();
+            //     cpuRef.record.pop();
+            //     print_d(CTL_PUP, "[Ref CPU]");
+            //     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
+            //     print_gpr(s.gpr);
+            // }
+            // print_d(CTL_PUP, "[Ref CPU Record] ==================   End   ================" CTL_RESET);
+
+            // print_d(CTL_PUP, "[Prac CPU Record] ==================  Start  ================" CTL_RESET);
+            // while (!cpu.record.empty()) {
+            //     auto s = cpu.record.front();
+            //     cpu.record.pop();
+            //     print_d(CTL_PUP, "[Prac CPU]");
+            //     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
+            //     print_gpr(s.gpr);
+            // }
+            // print_d(CTL_PUP, "[Prac CPU Record] ==================   End   ================" CTL_RESET);
+            exit(0);
+        }
+
+
+        cpu.step();
+        cpuRef.step();
+        // if (i != size - 1)
+        //     cpuRef.step();
     }
 }
 
@@ -275,16 +381,37 @@ void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A");
     uint32_t addr = 0x80100000;
     for (uint32_t i = 0; i < USER_PROGRAM.size(); ++i) {
-        serial_print(cpu, cpuRef, 'A');
-        serial_print(cpu, cpuRef, static_cast<uint32_t>(addr + i * 4));
-        serial_print(cpu, cpuRef, static_cast<uint32_t>(4));
-        serial_print(cpu, cpuRef, static_cast<uint32_t>(bit_reverse(USER_PROGRAM[i])));
-        debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 
-        debug("%c\n0x%08X\n0x%08X\n0x%08X\n", 'A', addr + i * 4, 4, static_cast<uint32_t>(USER_PROGRAM[i]));
+        serial_print(cpu, cpuRef, 'A');
+        print_dbg("@1");
+
+
+        serial_print(cpu, cpuRef, static_cast<uint32_t>(addr + i * 4));
+
+        // print_d(CTL_PUP, "[Ref CPU Record] ==================  Start  ================" CTL_RESET);
+        // while (!cpuRef.record.empty()) {
+        //     auto s = cpuRef.record.front();
+        //     cpuRef.record.pop();
+        //     print_d(CTL_PUP, "[Ref CPU]");
+        //     print_d(CTL_PUP, "PC: 0x%08X", s.pc);
+        //     print_gpr(s.gpr);
+        // }
+        // print_d(CTL_PUP, "[Ref CPU Record] ==================   End   ================" CTL_RESET);
+        print_dbg("@2");
+
+
+        serial_print(cpu, cpuRef, static_cast<uint32_t>(4));
+        // print_dbg("@3");
+        // compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu, 0);
+        serial_print(cpu, cpuRef, static_cast<uint32_t>(bit_reverse(USER_PROGRAM[i])));
+        // print_dbg("@4");
+        // compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu, 0);
+        print_dbg("[RunA] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+
+        print_dbg("%c\n0x%08X\n0x%08X\n0x%08X\n", 'A', addr + i * 4, 4, static_cast<uint32_t>(USER_PROGRAM[i]));
     }
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A Complete");
-    // debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    // print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 }
 template <typename T>
 void sendD(T &cpu, difftest::CpuRefImpl &cpuRef) {
@@ -294,10 +421,10 @@ void sendD(T &cpu, difftest::CpuRefImpl &cpuRef) {
     serial_print(cpu, cpuRef, 'D');
     serial_print(cpu, cpuRef, static_cast<uint32_t>(addr));
     serial_print(cpu, cpuRef, static_cast<uint32_t>(4 * size));
-    // debug("%c\n0x%08X\n%08X\n%08X\n", 'D', addr, 4, 4 * size);
+    // print_dbg("%c\n0x%08X\n%08X\n%08X\n", 'D', addr, 4, 4 * size);
 
     print_d(CTL_LIGHTBLUE, "[RunD] " CTL_RESET "Send D Complete");
-    debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 }
 
 template <typename T>
@@ -307,7 +434,7 @@ void sendG(T &cpu, difftest::CpuRefImpl &cpuRef) {
     serial_print(cpu, cpuRef, 'G');
     serial_print(cpu, cpuRef, addr);
     print_d(CTL_LIGHTBLUE, "[RunG] " CTL_RESET "Send G Complete");
-    debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 }
 
 template <typename T>
@@ -316,7 +443,7 @@ void sendR(T &cpu, difftest::CpuRefImpl &cpuRef) {
     uint32_t addr = 0x80100000;
     serial_print(cpu, cpuRef, 'R');
     print_d(CTL_LIGHTBLUE, "[RunR] " CTL_RESET "Send R Complete");
-    debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 }
 
 template <typename T>
@@ -327,5 +454,5 @@ void sendD2(T &cpu, difftest::CpuRefImpl &cpuRef) {
     serial_print(cpu, cpuRef, 0x80400000);
     serial_print(cpu, cpuRef, static_cast<uint32_t>(4 * MEM_VERIFICATION.size()));
     print_d(CTL_LIGHTBLUE, "[RunD2] " CTL_RESET "Send D2 Complete");
-    debug("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
 }

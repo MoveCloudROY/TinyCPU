@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Structs.h"
+#include "defines.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -35,6 +36,17 @@ public:
 
     uint32_t get_inst();
 
+    void start_record() {
+        print_d(CTL_PUP, "[Ref CPU Record] Start Record " CTL_RESET);
+        isRecording = 1;
+        while (!record.empty())
+            record.pop();
+    }
+    void stop_record() {
+        isRecording = 0;
+        print_d(CTL_PUP, "[Ref CPU Record] Stop Record " CTL_RESET);
+    }
+
 
 private:
 public:
@@ -46,6 +58,7 @@ public:
     uartsim                   uart;
     GeneralStatus             recentStatus;
     std::queue<GeneralStatus> history;
+    std::queue<GeneralStatus> record;
 
     ram func_mem{1024 * 1024};
     ram data_mem0{0x1000000};
@@ -57,6 +70,7 @@ public:
 
 private:
     size_t historySize;
+    bool   isRecording;
 };
 
 

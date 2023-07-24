@@ -136,10 +136,10 @@ int main(int argc, char **argv) {
                 inst_done_q.pop();
             if (inst_ref_q.size() > Q_SIZE)
                 inst_ref_q.pop();
-            // debug("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
-            // debug("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
-            // debug("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
-            // debug("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
+            // print_dbg("UART - exist_tx: 0x%X", cpuRef.uart.exist_tx());
+            // print_dbg("UART - DATA: 0x%08X,   CTL: 0x%08X", cpuRef.uart.DATA, cpuRef.uart.CTL);
+            // print_dbg("UART - _OCUPPY_1: 0x%08X,   _OCUPPY_2: 0x%08X", cpuRef.uart._OCUPPY_1, cpuRef.uart._OCUPPY_2);
+            // print_dbg("UART - _OCUPPY_3: 0x%08X,   _OCUPPY_5: 0x%08X", cpuRef.uart._OCUPPY_3, cpuRef.uart._OCUPPY_5);
 
             // 比较状态
             if (!compare_status(lastPcStatus, cpuRefStatus)) {
@@ -148,7 +148,7 @@ int main(int argc, char **argv) {
                 // 错误时，打印出历史记录
                 std::cout << "\n\n" CTL_ORIANGE "Prac CPU History:" CTL_RESET "\n";
                 while (!inst_done_q.empty()) {
-                    debug("===============================");
+                    print_dbg("===============================");
                     auto s = inst_done_q.front();
                     inst_done_q.pop();
                     print_d(CTL_PUP, "[Prac CPU]");
