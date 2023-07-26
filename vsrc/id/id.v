@@ -18,6 +18,11 @@ module id(
     input [`RegAddrBusW-1:0] ctl_wb_dest_i,
     input [`RegAddrBusW-1:0] ctl_mem_dest_i,
     input [`RegAddrBusW-1:0] ctl_ex_dest_i,
+    input [`RegW-1:0]        ctl_ex_pc_i ,
+    input [`RegW-1:0]        ctl_mem_pc_i,
+    input [`RegW-1:0]        ctl_wb_pc_i ,
+
+    // 控制信号
     input ctl_if_over_i,
     input ctl_id_valid_i,
     output ctl_id_over_o,
@@ -423,16 +428,22 @@ module id(
     /*==================================================*/
     wire rj_hazard;
     wire rk_hazard;
+    wire ex_not_same, mem_not_same, wb_not_same;
+
+    assign ex_not_same   = !(pc == ctl_ex_pc_i );
+    assign mem_not_same  = !(pc == ctl_mem_pc_i);
+    assign wb_not_same   = !(pc == ctl_wb_pc_i );
+
     assign rj_hazard = ~inst_no_rj 
                     & (rj_addr_o != 5'd0)
-                    & (  (ctl_ex_dest_i == rj_addr_o)
-                        |(ctl_mem_dest_i == rj_addr_o)
-                        |(ctl_wb_dest_i == rj_addr_o));
+                    & (  (ex_not_same && ctl_ex_dest_i == rj_addr_o)
+                        |(mem_not_same && ctl_mem_dest_i == rj_addr_o)
+                        |(wb_not_same && ctl_wb_dest_i == rj_addr_o));
     assign rk_hazard = ~inst_no_rk 
                     & (rk_addr_o != 5'd0)
-                    & (  (ctl_ex_dest_i == rk_addr_o)
-                        |(ctl_mem_dest_i == rk_addr_o)
-                        |(ctl_wb_dest_i == rk_addr_o));
+                    & (  (ex_not_same && ctl_ex_dest_i == rk_addr_o)
+                        |(mem_not_same && ctl_mem_dest_i == rk_addr_o)
+                        |(wb_not_same && ctl_wb_dest_i == rk_addr_o));
     
     // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
     assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | ctl_if_over_i);

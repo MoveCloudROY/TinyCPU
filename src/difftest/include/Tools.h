@@ -66,6 +66,40 @@ inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &r
     return false;
 }
 
+template <typename T>
+void forward_compare(T &cpu, difftest::CpuRefImpl &cpuRef, int bias, FILE *os = stdout) {
+    uprint_d(os, CTL_PUP, "[Forward Compare] ==================  Start  ================" CTL_RESET);
+
+    while (bias > 0) {
+        cpu.record.pop();
+        bias--;
+    }
+    while (bias < 0) {
+        cpuRef.record.pop();
+        bias++;
+    }
+    while (!cpu.record.empty() && !cpuRef.record.empty()) {
+        auto s = cpu.record.front();
+        cpu.record.pop();
+        auto sRef = cpuRef.record.front();
+        cpuRef.record.pop();
+
+        uprint_d(os, CTL_RED, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" CTL_RESET);
+        uprint_d(os, CTL_PUP, "[Ref CPU]");
+        uprint_d(os, CTL_PUP, "PC: 0x%08X", sRef.pc);
+        print_gpr(sRef.gpr, os);
+        uprint_d(os, CTL_RED, "===============================================" CTL_RESET);
+        uprint_d(os, CTL_PUP, "[Prac CPU]");
+        uprint_d(os, CTL_PUP, "PC: 0x%08X", s.pc);
+        print_gpr(s.gpr, os);
+        uprint_d(os, CTL_RED, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" CTL_RESET);
+
+        if (!compare_status(s, sRef, cpu, 0, os)) {
+            // exit(0);
+        }
+    }
+    uprint_d(os, CTL_PUP, "[Forward Compare] ==================   End   ================" CTL_RESET);
+}
 
 template <typename T>
 void print_ext(T &cpu, difftest::CpuRefImpl &cpuRef) {
@@ -205,8 +239,10 @@ void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
 
 
 template <typename T>
-void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
-    auto cpu_step5208 = [&]() {for (int _ = 0; _ < 1; ++_) cpu.step(); };
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208) {
+    // 当仿真时为 1（快速），实际设为 5208 速率大致相仿
+    auto cpu_step5208 = [&]() {for (int _ = 0; _ < clk; ++_) cpu.step(); };
+
     print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Go to UART send -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Wait to send %c(0x%08X)", ch, ch);
     // Start bit
@@ -227,12 +263,14 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch) {
     cpu_step5208();
 
     // CPU 完成 load，并执行完当前指令
-    while (cpu.nowStatus.uartRxReady /* cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02*/ || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+    while (cpu.nowStatus.uartRxReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
         cpu.step();
+        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
+        print_gpr(cpu.get_gpr());
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
 
-    // 同步至 CpuRef
+    // 同步至 Cpu
     while (cpu.nowStatus.pc != cpuRef.get_pc()) {
         cpuRef.step();
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
@@ -246,54 +284,19 @@ void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data) {
     uart_putc(cpu, cpuRef, data);
 }
 
-template <typename T>
-void forward_compare(T &cpu, difftest::CpuRefImpl &cpuRef, int bias, FILE *os = stdout) {
-    uprint_d(os, CTL_PUP, "[Forward Compare] ==================  Start  ================" CTL_RESET);
-
-    while (bias > 0) {
-        cpu.record.pop();
-        bias--;
-    }
-    while (bias < 0) {
-        cpuRef.record.pop();
-        bias++;
-    }
-    while (!cpu.record.empty() && !cpuRef.record.empty()) {
-        auto s = cpu.record.front();
-        cpu.record.pop();
-        auto sRef = cpuRef.record.front();
-        cpuRef.record.pop();
-
-        uprint_d(os, CTL_RED, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" CTL_RESET);
-        uprint_d(os, CTL_PUP, "[Ref CPU]");
-        uprint_d(os, CTL_PUP, "PC: 0x%08X", sRef.pc);
-        print_gpr(sRef.gpr, os);
-        uprint_d(os, CTL_RED, "===============================================" CTL_RESET);
-        uprint_d(os, CTL_PUP, "[Prac CPU]");
-        uprint_d(os, CTL_PUP, "PC: 0x%08X", s.pc);
-        print_gpr(s.gpr, os);
-        uprint_d(os, CTL_RED, "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<" CTL_RESET);
-
-        if (!compare_status(s, sRef, cpu, 0, os)) {
-            // exit(0);
-        }
-    }
-    uprint_d(os, CTL_PUP, "[Forward Compare] ==================   End   ================" CTL_RESET);
-}
-
 
 template <typename T, typename Td>
 void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
     constexpr size_t size = sizeof(Td);
     for (size_t i = 0; i < size; ++i) {
         // 多字节发送
-        if (i > 0) {
-            // 等待CPU 完成 load
-            while (cpu.nowStatus.uartRxReady || cpu.nowStatus.uartRxJustReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
-                cpu.step();
-            }
+        // if (i > 0) {
+        // 等待CPU 完成 load
+        while (cpu.nowStatus.uartRxReady || cpu.nowStatus.uartRxJustReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+            cpu.step();
         }
-        print_dbg("[RunA] data: 0x%08X, i: %d, byte: 0x%02X", data, (int)i, (data >> (i * 8)) & 0xFF);
+        // }
+        print_dbg("[UART.RX] data: 0x%08X, i: %d, byte: 0x%02X", data, (int)i, (data >> (i * 8)) & 0xFF);
         // using namespace std::chrono_literals;
         // std::this_thread::sleep_for(1000ms);
         // if (i == 0 && cpuRef.isRecording) {
@@ -349,37 +352,29 @@ inline uint32_t bit_reverse(uint32_t x) {
 
 template <typename T>
 void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
+    // cpuRef.start_record();
+    // cpu.start_record();
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A");
     uint32_t addr = 0x80100000;
     for (uint32_t i = 0; i < USER_PROGRAM.size(); ++i) {
-
-        if (i == 0) {
-            cpuRef.start_record();
-            cpu.start_record();
-        }
         serial_print(cpu, cpuRef, 'A');
-
         serial_print(cpu, cpuRef, static_cast<uint32_t>(addr + i * 4));
-
-
         serial_print(cpu, cpuRef, static_cast<uint32_t>(4));
-
         serial_print(cpu, cpuRef, static_cast<uint32_t>(bit_reverse(USER_PROGRAM[i])));
-        if (i == 1 && cpuRef.isRecording) {
-            cpuRef.stop_record();
-            cpu.stop_record();
-            auto f = fopen("history.txt", "w");
-            forward_compare(cpu, cpuRef, 0, f);
-            fclose(f);
-            exit(0);
-        }
-
         print_dbg("[RunA] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-
         print_dbg("%c\n0x%08X\n0x%08X\n0x%08X\n", 'A', addr + i * 4, 4, static_cast<uint32_t>(USER_PROGRAM[i]));
     }
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A Complete");
     // print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+
+    // if (cpuRef.isRecording) {
+    //     cpuRef.stop_record();
+    //     cpu.stop_record();
+    //     auto f = fopen("history.txt", "w");
+    //     forward_compare(cpu, cpuRef, 0, f);
+    //     fclose(f);
+    //     exit(0);
+    // }
 }
 template <typename T>
 void sendD(T &cpu, difftest::CpuRefImpl &cpuRef) {

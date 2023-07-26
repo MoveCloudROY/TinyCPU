@@ -188,18 +188,20 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
-            // cpuRef.start_record();
-            // cpu.start_record();
+            cpuRef.start_record();
+            cpu.start_record();
 
             sendA(cpu, cpuRef);
-
-            // cpuRef.stop_record();
-            // cpu.stop_record();
-            // auto f = fopen("history.txt", "w");
-            // forward_compare(cpu, cpuRef, 0, f);
-            // fclose(f);
-            // exit(0);
             sendD(cpu, cpuRef);
+
+            if (cpuRef.isRecording) {
+                cpuRef.stop_record();
+                cpu.stop_record();
+                auto f = fopen("history.txt", "w");
+                forward_compare(cpu, cpuRef, 0, f);
+                fclose(f);
+                exit(0);
+            }
         }
 
         if (sendFlag) {

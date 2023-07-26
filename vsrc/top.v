@@ -99,6 +99,11 @@ module top (
     wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
     wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
     wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
+    wire [`RegW-1:0] ctl_ex_pc_c;
+    wire [`RegW-1:0] ctl_mem_pc_c;
+    wire [`RegW-1:0] ctl_wb_pc_c;
+
+
     // ID->IF 提前跳转总线
     wire [32:0] jbr_bus_c;
     wire ctl_jbr_taken;
@@ -280,6 +285,9 @@ module top (
         .ctl_ex_dest_i(ctl_ex_dest_c),
         .ctl_mem_dest_i(ctl_mem_dest_c),
         .ctl_wb_dest_i(ctl_wb_dest_c),
+        .ctl_ex_pc_i(ctl_ex_pc_c),
+        .ctl_mem_pc_i(ctl_mem_pc_c),
+        .ctl_wb_pc_i(ctl_wb_pc_c),
 
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_valid_i(ctl_id_valid),
@@ -318,7 +326,8 @@ module top (
 
         .ctl_ex_valid_i(ctl_ex_valid),
         .ctl_ex_over_o(ctl_ex_over),
-        .ctl_ex_dest_o(ctl_ex_dest_c)
+        .ctl_ex_dest_o(ctl_ex_dest_c),
+        .ctl_ex_pc_o(ctl_ex_pc_c)
     );
 
     ex_mem U_ex2mem(
@@ -346,7 +355,9 @@ module top (
 
         .ctl_mem_valid_i(ctl_mem_valid),
         .ctl_mem_over_o(ctl_mem_over),
-        .ctl_mem_dest_o(ctl_mem_dest_c)
+        .ctl_mem_dest_o(ctl_mem_dest_c),
+        .ctl_mem_pc_o(ctl_mem_pc_c)
+
     );
 
     mem_wb U_mem2wb(
@@ -372,7 +383,8 @@ module top (
 
         .ctl_wb_valid_i(ctl_wb_valid),
         .ctl_wb_over_o(ctl_wb_over),
-        .ctl_wb_dest_o(ctl_wb_dest_c)
+        .ctl_wb_dest_o(ctl_wb_dest_c),
+        .ctl_wb_pc_o(ctl_wb_pc_c)
     );
 
     /*================================*/

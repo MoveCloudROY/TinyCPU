@@ -134,6 +134,10 @@ public:
         print_d(CTL_PUP, "[Prac CPU Record] Stop Record " CTL_RESET);
     }
 
+    auto get_gpr() {
+        return getGprCallback();
+    }
+
     void operator+=(int step) {
         sleep(step);
     }

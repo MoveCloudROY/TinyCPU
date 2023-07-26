@@ -14,7 +14,8 @@ module mem(
 
     input                       ctl_mem_valid_i,
     output                      ctl_mem_over_o,
-    output [`RegAddrBusW-1:0]   ctl_mem_dest_o
+    output [`RegAddrBusW-1:0]   ctl_mem_dest_o,
+    output [`RegW - 1: 0]       ctl_mem_pc_o
 );
     /*==================================================*/
     //                 级间寄存器信号解析
@@ -142,6 +143,8 @@ module mem(
     assign ctl_mem_dest_o = wb_wdest & {5{ctl_mem_valid_i}};
 
     assign ctl_mem_over_o = ctl_mem_valid_i;
+
+    assign ctl_mem_pc_o = pc;
 
 endmodule
 

@@ -10,7 +10,8 @@ module ex(
 
     input ctl_ex_valid_i,
     output ctl_ex_over_o,
-    output [`RegAddrBusW-1:0] ctl_ex_dest_o
+    output [`RegAddrBusW-1:0] ctl_ex_dest_o,
+    output [`RegW - 1: 0] ctl_ex_pc_o
 
     
     //5级流水新增
@@ -106,6 +107,7 @@ module ex(
     //只有在EXE模块有效时，其写回目的寄存器号才有意义
     assign ctl_ex_dest_o = id_wb_rd_addr & {5{ctl_ex_valid_i}};
 
+    assign ctl_ex_pc_o = pc;
 
 
 endmodule

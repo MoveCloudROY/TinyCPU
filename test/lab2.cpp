@@ -167,10 +167,19 @@ int test_main(int argc, char **argv) {
 
         if (PracUartTxStr == ".") {
             serial_print(cpu, cpuRef, 'T');
+            while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+                cpu.step();
+            }
+
+            // 同步至 CpuRef
+            while (cpu.nowStatus.pc != cpuRef.get_pc()) {
+                cpu.step();
+                // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
+            }
         }
 
         if (sendFlag) {
-            serial_print(cpu, cpuRef, sendChar);
+            serial_print_u8(cpu, cpuRef, sendChar);
             sendFlag = false;
         }
 
