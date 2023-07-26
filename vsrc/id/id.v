@@ -263,13 +263,13 @@ module id(
     assign inst_or  = inst_OR  | inst_ORI;                          // 逻辑或
     assign inst_xor = inst_XOR | inst_XORI;                         // 逻辑异或
     assign inst_sll = inst_SLL_W | inst_SLLI_W;                     // 逻辑左移
-    assign inst_srl = inst_SRL_W | inst_SLLI_W;                     // 逻辑右移
+    assign inst_srl = inst_SRL_W | inst_SRLI_W;                     // 逻辑右移
     assign inst_sra = inst_SRA_W | inst_SRAI_W;                     // 算术右移
     assign inst_lui = inst_LU12I_W;                                 // 立即数装载高位
 
     // 立即数移位
     wire inst_shf_imm;
-    assign inst_shf_imm =  inst_SLLI_W | inst_SLLI_W | inst_SRAI_W;
+    assign inst_shf_imm =  inst_SLLI_W | inst_SRLI_W | inst_SRAI_W;
     
     // 依据立即数扩展方式分类
     wire inst_imm_zero;   //立即数0扩展

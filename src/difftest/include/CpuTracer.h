@@ -191,6 +191,7 @@ public:
     difftest::PerfTracer      perfTracer;
 
     std::queue<GeneralStatus> record;
+    bool                      isRecording;
 
 private:
     std::unique_ptr<VerilatedContext>             context;
@@ -200,8 +201,8 @@ private:
     std::function<TStatus(void)>                  afterCallback;
     std::function<std::array<uint32_t, 32>(void)> getGprCallback;
     bool                                          wave_on;
-    bool                                          isRecording;
-    size_t                                        historySize;
+
+    size_t historySize;
 };
 
 } // namespace difftest

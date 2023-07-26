@@ -34,14 +34,6 @@
 #include <termios.h>
 
 
-struct CpuStatus {
-    uint32_t pc;
-    uint32_t targetAddr;
-    uint32_t targetData;
-    uint32_t uartTxBusy;
-    uint32_t uartRxReady;
-};
-
 int test_main(int argc, char **argv) {
     srand(time(0));
     // 初始化 ExtRam
@@ -62,7 +54,8 @@ int test_main(int argc, char **argv) {
             cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr,
             cpu->rootp->top__DOT__U_wb__DOT__rf_wdata_o,
             cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy,
-            cpu->rootp->top__DOT____Vtogcov__ext_uart_avai
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_avai,
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_rx_ready
 
         };
     };

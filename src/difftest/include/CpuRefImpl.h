@@ -59,6 +59,7 @@ public:
     GeneralStatus             recentStatus;
     std::queue<GeneralStatus> history;
     std::queue<GeneralStatus> record;
+    bool                      isRecording;
 
     ram func_mem{1024 * 1024};
     ram data_mem0{0x1000000};
@@ -70,7 +71,6 @@ public:
 
 private:
     size_t historySize;
-    bool   isRecording;
 };
 
 

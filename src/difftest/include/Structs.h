@@ -8,3 +8,12 @@ struct GeneralStatus {
     uint32_t                 pc;
     std::array<uint32_t, 32> gpr;
 };
+
+struct CpuStatus {
+    uint32_t pc;
+    uint32_t targetAddr;
+    uint32_t targetData;
+    uint32_t uartTxBusy;
+    uint32_t uartRxReady;
+    uint32_t uartRxJustReady;
+};

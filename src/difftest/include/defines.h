@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdio>
+#include <ostream>
 #include <random>
 #include <bitset>
 #include <iostream>
@@ -36,12 +38,12 @@
 
 
 template <typename T>
-void print_gpr(T arr) {
+void print_gpr(T arr, FILE *os = stdout) {
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 4; ++j) {
             auto index = i * 4 + j;
-            std::printf("GPR[%2d]: 0x%08X   ", index, arr[index]);
+            std::fprintf(os, "GPR[%2d]: 0x%08X   ", index, arr[index]);
         }
-        std::printf("\n");
+        std::fprintf(os, "\n");
     }
 }

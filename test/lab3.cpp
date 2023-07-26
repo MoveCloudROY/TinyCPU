@@ -33,16 +33,18 @@
 #include <csignal>
 #include <fstream>
 #include <termios.h>
+#include <signal.h>
 
 constexpr size_t TRACE_DEEP = 10;
 
-struct CpuStatus {
-    uint32_t pc;
-    uint32_t targetAddr;
-    uint32_t targetData;
-    uint32_t uartTxBusy;
-    uint32_t uartRxReady;
-};
+
+namespace {
+std::function<void(int)> shutdown_handler;
+
+void signal_handler(int signal) {
+    shutdown_handler(signal);
+}
+} // namespace
 
 
 int test_main(int argc, char **argv) {
@@ -69,9 +71,8 @@ int test_main(int argc, char **argv) {
             cpu->rootp->top__DOT__U_wb__DOT__dbg_dm_addr,
             cpu->rootp->top__DOT__U_wb__DOT__rf_wdata_o,
             cpu->rootp->top__DOT____Vtogcov__ext_uart_tx_busy,
-            cpu->rootp->top__DOT____Vtogcov__ext_uart_avai
-
-        };
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_avai,
+            cpu->rootp->top__DOT____Vtogcov__ext_uart_rx_ready};
     };
     // 注册回调
     cpu.register_beforeCallback(updateFunc);
@@ -102,6 +103,12 @@ int test_main(int argc, char **argv) {
         TRACE_DEEP
 
     };
+
+    shutdown_handler = [&](int signal) {
+        // forward_compare(cpu, cpuRef, 1, stdout);
+        exit(0);
+    };
+    signal(SIGINT, signal_handler);
 
     // 串口输入模拟线程
     ThreadRaii uart_input_thread{[&]() {
@@ -181,7 +188,17 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
+            // cpuRef.start_record();
+            // cpu.start_record();
+
             sendA(cpu, cpuRef);
+
+            // cpuRef.stop_record();
+            // cpu.stop_record();
+            // auto f = fopen("history.txt", "w");
+            // forward_compare(cpu, cpuRef, 0, f);
+            // fclose(f);
+            // exit(0);
             sendD(cpu, cpuRef);
         }
 
