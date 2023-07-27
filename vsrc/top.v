@@ -66,6 +66,48 @@ module top (
 );
 
     /*==================================================*/
+    //                流水数据信号定义部分
+    /*==================================================*/
+    /*================================*/
+    //            数据通路
+    /*================================*/
+    // IF->InstRAM 取指令
+    wire [`RegW-1:0] if_pc_c;
+    // IF->IF/ID 构建级间寄存器
+    wire [`RegW-1:0] if_inst_c;
+
+    // ID->Regfile 取值
+    wire [`RegW-1:0] rj_data_c;
+    wire [`RegW-1:0] rk_data_c;
+    wire [`RegAddrBusW-1:0] rj_addr_c;
+    wire [`RegAddrBusW-1:0] rk_addr_c;
+
+    // MEM->DataRAM 访存相关
+    wire [ 31:0] dm_rdata_c;
+    wire [ 31:0] dm_addr_c;
+    wire [  3:0] dm_wbe_n_c;
+    wire [ 31:0] dm_wdata_c;
+    wire         dm_re_c;
+    wire         dm_we_c;
+
+    // WB->Regfile 写回寄存器
+    wire [  4:0] rf_wdest_c;
+    wire           rf_we_c;
+    wire [ 31:0] rf_wdata_c;
+
+    /*================================*/
+    //           级间总线信号
+    /*================================*/
+    wire [`IF2IDBusSize - 1:0]  if2id_bus_r;
+    wire [`ID2EXBusSize - 1:0]  id2ex_bus_c;
+    wire [`ID2EXBusSize - 1:0]  id2ex_bus_r;
+    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_c;
+    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_r;
+    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_c;
+    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_r;
+
+
+    /*==================================================*/
     //                    总线仲裁信号
     /*==================================================*/
     wire ifu_resp_c;
@@ -117,47 +159,6 @@ module top (
     assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in & ( ~(dm_we_c | dm_re_c) | lsu_resp_c) )) ;
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
 
-
-    /*==================================================*/
-    //                流水数据信号定义部分
-    /*==================================================*/
-    /*================================*/
-    //            数据通路
-    /*================================*/
-    // IF->InstRAM 取指令
-    wire [`RegW-1:0] if_pc_c;
-    // IF->IF/ID 构建级间寄存器
-    wire [`RegW-1:0] if_inst_c;
-
-    // ID->Regfile 取值
-    wire [`RegW-1:0] rj_data_c;
-    wire [`RegW-1:0] rk_data_c;
-    wire [`RegAddrBusW-1:0] rj_addr_c;
-    wire [`RegAddrBusW-1:0] rk_addr_c;
-
-    // MEM->DataRAM 访存相关
-    wire [ 31:0] dm_rdata_c;
-    wire [ 31:0] dm_addr_c;
-    wire [  3:0] dm_wbe_n_c;
-    wire [ 31:0] dm_wdata_c;
-    wire         dm_re_c;
-    wire         dm_we_c;
-
-    // WB->Regfile 写回寄存器
-    wire [  4:0] rf_wdest_c;
-    wire           rf_we_c;
-    wire [ 31:0] rf_wdata_c;
-
-    /*================================*/
-    //           级间总线信号
-    /*================================*/
-    wire [`IF2IDBusSize - 1:0]  if2id_bus_r;
-    wire [`ID2EXBusSize - 1:0]  id2ex_bus_c;
-    wire [`ID2EXBusSize - 1:0]  id2ex_bus_r;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_c;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_r;
-    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_c;
-    wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_r;
 
     /*==================================================*/
     //                   仿真信号转接

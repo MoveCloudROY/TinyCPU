@@ -430,9 +430,9 @@ module id(
     wire rk_hazard;
     wire ex_not_same, mem_not_same, wb_not_same;
 
-    assign ex_not_same   = !(pc == ctl_ex_pc_i );
-    assign mem_not_same  = !(pc == ctl_mem_pc_i);
-    assign wb_not_same   = !(pc == ctl_wb_pc_i );
+    assign ex_not_same   = !(pc[21:0] == ctl_ex_pc_i[21:0] );
+    assign mem_not_same  = !(pc[21:0] == ctl_mem_pc_i[21:0]);
+    assign wb_not_same   = !(pc[21:0] == ctl_wb_pc_i[21:0] );
 
     assign rj_hazard = ~inst_no_rj 
                     & (rj_addr_o != 5'd0)
