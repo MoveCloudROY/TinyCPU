@@ -74,17 +74,17 @@ module bridge (
 `else
 
     // 朴素形式
-    assign ifu_tar_base = (ifu_addr_i[31:22] == 0'b1000000000) & ifu_req_i;
-    assign ifu_tar_ext  = (ifu_addr_i[31:22] == 0'b1000000001) & ifu_req_i;
-    assign lsu_tar_base = (lsu_addr_i[31:22] == 0'b1000000000) & lsu_req_i;
-    assign lsu_tar_ext  = (lsu_addr_i[31:22] == 0'b1000000001) & lsu_req_i;
-    assign lsu_tar_uart = (lsu_addr_i[31:22] == 0'b1011111111) & lsu_req_i;
+    // assign ifu_tar_base = (ifu_addr_i[31:22] == 0'b1000000000) & ifu_req_i;
+    // assign ifu_tar_ext  = (ifu_addr_i[31:22] == 0'b1000000001) & ifu_req_i;
+    // assign lsu_tar_base = (lsu_addr_i[31:22] == 0'b1000000000) & lsu_req_i;
+    // assign lsu_tar_ext  = (lsu_addr_i[31:22] == 0'b1000000001) & lsu_req_i;
+    // assign lsu_tar_uart = (lsu_addr_i[31:22] == 0'b1011111111) & lsu_req_i;
 
-    // assign ifu_tar_base = (ifu_addr_i[22] == 1'b0) & ifu_req_i;
-    // assign ifu_tar_ext  = (ifu_addr_i[22] == 1'b1) & ifu_req_i;
-    // assign lsu_tar_base = (lsu_addr_i[23:22] == 2'b00) & lsu_req_i;
-    // assign lsu_tar_ext  = (lsu_addr_i[23:22] == 2'b01) & lsu_req_i;
-    // assign lsu_tar_uart = (lsu_addr_i[23:22] == 2'b11) & lsu_req_i;
+    assign ifu_tar_base = (ifu_addr_i[23:22] == 1'b00) & ifu_req_i;
+    assign ifu_tar_ext  = (ifu_addr_i[23:22] == 1'b01) & ifu_req_i;
+    assign lsu_tar_base = (lsu_addr_i[23:22] == 2'b00) & lsu_req_i;
+    assign lsu_tar_ext  = (lsu_addr_i[23:22] == 2'b01) & lsu_req_i;
+    assign lsu_tar_uart = (lsu_addr_i[23:22] == 2'b11) & lsu_req_i;
 `endif
     assign ifu_resp_o = ~ifu_req_i | (ifu_tar_base & ~lsu_tar_base & (
             ( ~lsu_tar_ext  & ~lsu_tar_uart & ~lsu_req_i )
