@@ -4,6 +4,21 @@
 
 
 /*==============================================*/
+//                   Debug 相关
+/*==============================================*/
+`define VIVADO_DEBUG_ON
+
+`ifdef VIVADO_DEBUG_ON
+    `define NO_TOUCH    (* dont_touch = "yes" *)
+    `define DEBUG_SIG   (* mark_debug = "yes" *)
+`else
+    `define NO_TOUCH
+    `define DEBUG_SIG
+`endif
+
+
+
+/*==============================================*/
 //                    ABI 相关
 /*==============================================*/
 // `define LOONG_PC_START_ADDR   32'h1c000000

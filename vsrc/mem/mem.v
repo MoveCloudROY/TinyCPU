@@ -33,7 +33,7 @@ module mem(
     
     
     //pc
-    wire [`RegW - 1:0] pc;
+    `NO_TOUCH wire [`RegW - 1:0] pc;
 
     assign {
         mem_control,
@@ -127,7 +127,7 @@ module mem(
     /*==================================================*/
     //              下级所需数据/总线生成
     /*==================================================*/
-    wire [31:0] mem_result; //MEM传到WB的result为load结果或EXE结果
+    `NO_TOUCH wire [31:0] mem_result; //MEM传到WB的result为load结果或EXE结果
     assign mem_result = inst_load ? load_result : exe_result;
     
     assign mem2wb_bus_o = {

@@ -23,7 +23,7 @@ module ex(
     wire [`RegW - 1:0] id_mem_st_data;
     wire [`RegAddrBusW-1:0] id_wb_rd_addr;
     wire id_wb_rd_we;
-    wire [`RegW - 1:0] pc;
+    `NO_TOUCH wire [`RegW - 1:0] pc;
     assign {
         id_multiply,
         id_aluop,
