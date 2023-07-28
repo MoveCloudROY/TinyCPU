@@ -15,7 +15,7 @@ module id_ex(
 
     always @(posedge clk_i) begin
         if (rst_i) begin
-            id2ex_bus_ro <= {12'd0, 32'd0, 32'd0, 6'd0, 32'd0, 5'd0, 1'd0, 32'd0};
+            id2ex_bus_ro <= {1'd0, 12'd0, 32'd0, 32'd0, 6'd0, 32'd0, 5'd0, 1'd0, 32'd0};
 
         end else if (ctl_id_over_i && ctl_ex_allow_in_i) begin
             // 向 ID 传递 PC INST

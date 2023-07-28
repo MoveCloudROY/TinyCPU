@@ -322,6 +322,7 @@ module top (
     /*================================*/
 
     ex U_ex(
+        .clk_i(clk_i),
         .id2ex_bus_ri(id2ex_bus_r),
         .ex2mem_bus_o(ex2mem_bus_c),
 

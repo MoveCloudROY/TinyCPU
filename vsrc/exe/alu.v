@@ -1,10 +1,11 @@
-`timescale 1ns / 1ps
+`include "common.vh"
+
 module alu(
-    input  [11:0] alu_control,  // ALU控制信号
-    input  [31:0] alu_rj,       // ALU操作数1,为补码
-    input  [31:0] alu_rk,       // ALU操作数2，为补码
-    output [31:0] alu_result    // ALU结果
-    );
+    input  [`AluOpW - 1:0] alu_control, // ALU控制信号
+    input  [`RegW - 1:0]   alu_rj,      // ALU操作数1,为补码
+    input  [`RegW - 1:0]   alu_rk,      // ALU操作数2，为补码
+    output [`RegW - 1:0]   alu_result   // ALU结果
+);
 
     /*==================================================*/
     //                    控制码解析

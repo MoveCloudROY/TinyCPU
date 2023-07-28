@@ -17,26 +17,28 @@
 /*==============================================*/
 //                  机器字长相关
 /*==============================================*/
-`define InstLen 32          //指令长度
-`define InstAddrBusW 32     //ROM的地址总线宽度
-`define InstDataBusW 32     //ROM的数据总线宽度 
-`define InstMemSize 131071  //ROM的实际大小为128KB
-`define InstMemSizeLog2 17  //ROM实际使用的地址线宽度
+`define InstLen         32          //指令长度
+`define InstAddrBusW    32          //ROM的地址总线宽度
+`define InstDataBusW    32          //ROM的数据总线宽度 
+`define InstMemSize     131071      //ROM的实际大小为128KB
+`define InstMemSizeLog2 17          //ROM实际使用的地址线宽度
 
-`define RegAddrBusW 5       //Regfile模块的地址线宽度
-`define RegDataBusW 32      //Regfile模块的数据线宽度
-`define RegW 32             //通用寄存器的宽度
-`define DoubleRegW 64       //两倍的通用寄存器的宽度
-`define DoubleRegBus 64     //两倍的通用寄存器的数据线宽度
-`define RegNum 32           //通用寄存器的数量
-`define RegNumLog2 5        //寻址通用寄存器使用的地址位数
-`define NOPRegAddr 5'b00000 
+`define RegAddrBusW     5           //Regfile模块的地址线宽度
+`define RegDataBusW     32          //Regfile模块的数据线宽度
+`define RegW            32          //通用寄存器的宽度
+`define DoubleRegW      64          //两倍的通用寄存器的宽度
+`define DoubleRegBus    64          //两倍的通用寄存器的数据线宽度
+`define RegNum          32          //通用寄存器的数量
+`define RegNumLog2      5           //寻址通用寄存器使用的地址位数
+`define NOPRegAddr      5'b00000 
+
+`define AluOpW          12
 
 /*==============================================*/
 //                级间寄存器相关
 /*==============================================*/
 `define IF2IDBusSize        (2 * `RegW)
-`define ID2EXBusSize        (12 + 2 * `RegW + 6 + `RegW + `RegAddrBusW + 1 + `RegW)
+`define ID2EXBusSize        (1 + `AluOpW + 2 * `RegW + 6 + `RegW + `RegAddrBusW + 1 + `RegW)
 `define EX2MEMBusSize       (6 + `RegW + `RegW + `RegAddrBusW + 1 + `RegW)
 `define MEM2WBBusSize       (5 + 1 + `RegW + `RegW + `RegW)
 

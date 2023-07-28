@@ -152,7 +152,7 @@ module id(
     // OPCODE.length == 17
     wire inst_ADD_W, inst_SUB_W, inst_SLT, inst_SLTU;
     wire inst_NOR, inst_AND, inst_OR, inst_XOR;
-    wire inst_SLL_W, inst_SRL_W, inst_SRA_W/*, inst_MUL_W*/;
+    wire inst_SLL_W, inst_SRL_W, inst_SRA_W, inst_MUL_W;
     // wire inst_MULH_W, inst_MULH_WU, inst_DIV_W, inst_MOD_W;
     // wire inst_DIV_WU, inst_MOD_WU, inst_BREAK, inst_SYSCALL;
     wire inst_SLLI_W, inst_SRLI_W, inst_SRAI_W;
@@ -199,6 +199,7 @@ module id(
     assign inst_SLL_W   = (_3r_op == `INST_SLL_W);
     assign inst_SRL_W   = (_3r_op == `INST_SRL_W);
     assign inst_SRA_W   = (_3r_op == `INST_SRA_W);
+    assign inst_MUL_W   = (_3r_op == `INST_MUL_W);
     assign inst_SLLI_W  = (_3r_op == `INST_SLLI_W);
     assign inst_SRLI_W  = (_3r_op == `INST_SRLI_W);
     assign inst_SRAI_W  = (_3r_op == `INST_SRAI_W);
@@ -360,7 +361,8 @@ module id(
     /*==================================================*/
     //              下级所需数据/总线生成
     /*==================================================*/
-    wire [11:0] id_aluop;
+    wire id_multiply;
+    wire [`AluOpW - 1:0] id_aluop;
     wire [`RegW - 1:0] id_rj;
     wire [`RegW - 1:0] id_rk;
     wire [5:0] id_mem_ctl;
@@ -369,6 +371,9 @@ module id(
     wire id_wb_rd_we;
     
     // EXE 需要的数据
+    // 是否进行乘法
+    assign id_multiply = inst_MUL_W;
+    
     // alu 操作类型
     assign id_aluop = {
         inst_add,
@@ -420,7 +425,7 @@ module id(
     assign id_wb_rd_addr = inst_wdest_none ? 5'd0 :
                         inst_wdest_r1 ? 5'd1 : rd_addr;
 
-    assign id2ex_bus_o = {id_aluop, id_rj, id_rk, id_mem_ctl, id_mem_st_data, id_wb_rd_addr, id_wb_rd_we, pc};
+    assign id2ex_bus_o = {id_multiply, id_aluop, id_rj, id_rk, id_mem_ctl, id_mem_st_data, id_wb_rd_addr, id_wb_rd_we, pc};
 
 
     /*==================================================*/

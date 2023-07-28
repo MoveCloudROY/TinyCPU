@@ -1,9 +1,7 @@
 `include "common.vh"
 
 module ex(
-    // input              EXE_valid,    // 执行级有效信号
-    // input      [166:0] ID_EXE_bus_r, // ID->EXE总线
-    // output             EXE_over,     // EXE模块执行完成
+    input  clk_i,      // 时钟
 
     input  [`ID2EXBusSize - 1:0]    id2ex_bus_ri,
     output [`EX2MEMBusSize - 1:0]   ex2mem_bus_o,
@@ -13,15 +11,12 @@ module ex(
     output [`RegAddrBusW-1:0] ctl_ex_dest_o,
     output [`RegW - 1: 0] ctl_ex_pc_o
 
-    
-    //5级流水新增
-    // input              clk,       // 时钟
-    // output     [  4:0] EXE_wdest,   // EXE级要写回寄存器堆的目标地址号
 );
     /*==================================================*/
     //                 级间寄存器信号解析
     /*==================================================*/
-    wire [11:0] id_aluop;
+    wire id_multiply;
+    wire [`AluOpW - 1:0] id_aluop;
     wire [`RegW - 1:0] id_rj;
     wire [`RegW - 1:0] id_rk;
     wire [5:0] id_mem_ctl;
@@ -30,6 +25,7 @@ module ex(
     wire id_wb_rd_we;
     wire [`RegW - 1:0] pc;
     assign {
+        id_multiply,
         id_aluop,
         id_rj,
         id_rk,
@@ -60,20 +56,19 @@ module ex(
     /*================================*/
     //               *
     /*================================*/
-    // wire        mult_begin; 
-    // wire [63:0] product; 
-    // wire        mult_end;
+    wire        mult_start; 
+    wire [63:0] product; 
+    wire        mult_end;
     
-    // // assign mult_begin = multiply & EXE_valid;
-    // multiply multiply_module (
-    //     .clk       (clk       ),
-    //     .mult_begin(mult_begin  ),
-    //     .mult_op1  (alu_operand1), 
-    //     .mult_op2  (alu_operand2),
-    //     .product   (product   ),
-    //     .mult_end  (mult_end  )
-    // );
-
+    assign mult_start = id_multiply & ctl_ex_valid_i;
+    multiplier multiply_module(
+        .clk_i       (clk_i     ),
+        .mult_start_i(mult_start),
+        .mult_opd1_i (id_rj     ), 
+        .mult_opd2_i (id_rk     ),
+        .product_o   (product   ),
+        .mult_end_o  (mult_end  )
+    );
 
 
 
@@ -86,7 +81,7 @@ module ex(
     // wire        lo_write;
     //要写入HI的值放在exe_result里，包括MULT和MTHI指令,
     //要写入LO的值放在lo_result里，包括MULT和MTLO指令,
-    assign exe_result = alu_result;
+    assign exe_result = id_multiply ? product[31:0] : alu_result;
 
     assign ex2mem_bus_o = {
         // MEM 需要的信号
@@ -102,7 +97,7 @@ module ex(
     /*==================================================*/
     //对于ALU操作，都是1拍可完成，
     //但对于乘法操作，需要多拍完成
-    assign ctl_ex_over_o = ctl_ex_valid_i /* & (~multiply | mult_end) */ ;
+    assign ctl_ex_over_o = ctl_ex_valid_i  & (~id_multiply | mult_end) ;
 
     //只有在EXE模块有效时，其写回目的寄存器号才有意义
     assign ctl_ex_dest_o = id_wb_rd_addr & {5{ctl_ex_valid_i}};
