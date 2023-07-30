@@ -4,18 +4,22 @@ module pc_reg(
     input clk_i,
     input rst_i,
     input [32:0] jbr_bus_i,   // 跳转总线
+    input [`RegW-1:0] if_inst_i,
 
     input ctl_if_allow_nxt_pc_i,
-    input ctl_if_valid_i,
-    output ctl_if_over_o,
+    // input ctl_if_valid_i,
+    // output ctl_if_over_o,
 
-    output [`RegW-1:0] if_pc_o
+    output [`RegW-1:0] if_nxt_pc_o,
+    output [`RegW-1:0] if_pc_o,
+    output [`RegW-1:0] if_inst_o
 );
     // 下一个 PC
     wire [`RegW-1:0] next_pc;
     wire [`RegW-1:0] seq_pc;
 
     reg  [`RegW-1:0] pc;
+    reg  [`RegW-1:0] inst;
 
     //跳转pc
     wire        jbr_taken;
@@ -33,11 +37,13 @@ module pc_reg(
             pc <= `LOONG_PC_START_ADDR - 4;
         end else if (ctl_if_allow_nxt_pc_i) begin
             pc <= next_pc;
+            inst <= if_inst_i;
         end
     end
 
 
-    assign ctl_if_over_o = ctl_if_valid_i;
-
+    
+    assign if_nxt_pc_o = next_pc;
     assign if_pc_o = pc;
+    assign if_inst_o = inst;
 endmodule

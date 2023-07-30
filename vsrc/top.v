@@ -73,6 +73,13 @@ module top (
     /*================================*/
     // IF->InstRAM 取指令
     `NO_TOUCH wire [`RegW-1:0] if_pc_c;
+    wire [`RegW-1:0] if0_inst_c;
+    wire [`RegW-1:0] if0_nxt_pc_c;
+    wire [`RegW-1:0] if02if1_pc_c;
+    wire [`RegW-1:0] if02if1_inst_c;
+    wire [`RegW-1:0] if12id_nxt_pc_c;
+    wire [`RegW-1:0] if12id_pc_c;
+    wire [`RegW-1:0] if12id_inst_c;
     // IF->IF/ID 构建级间寄存器
     `NO_TOUCH wire [`RegW-1:0] if_inst_c;
 
@@ -250,7 +257,23 @@ module top (
         .clk_i(clk_i),
         .rst_i(rst_i),
         .jbr_bus_i(jbr_bus_c),
-        .if_pc_o(if_pc_c),
+        .if_inst_i(if0_inst_c),
+
+        .if_nxt_pc_o(if0_nxt_pc_c),
+        .if_pc_o(if02if1_pc_c),
+        .if_inst_o(if02if1_inst_c),
+
+        .ctl_if_allow_nxt_pc_i(ctl_if_allow_nxt_pc)
+    );
+
+    if1 U_if1(
+        .clk_i(clk_i),
+        .rst_i(rst_i),
+
+        .if_pc_i(if02if1_pc_c),
+        .if_inst_i(if02if1_inst_c),
+        .if1_pc_o(if12id_pc_c),
+        .if1_inst_o(if12id_inst_c),
 
         .ctl_if_valid_i(ctl_if_valid),
         .ctl_if_over_o(ctl_if_over),
@@ -260,8 +283,8 @@ module top (
     if_id U_if2id(
         .clk_i(clk_i),
         .rst_i(rst_i),
-        .if_pc_i(if_pc_c),
-        .if_inst_i(if_inst_c),
+        .if_pc_i(if12id_pc_c),
+        .if_inst_i(if12id_inst_c),
         .if2id_bus_ro(if2id_bus_r),
 
         .ctl_baseram_hazard(~ifu_resp_c),
@@ -588,10 +611,27 @@ module top (
     // assign ext_ram_oe_n =  ~dm_re_c;
     // assign ext_ram_we_n =  ~dm_we_c;
 `endif
+    wire [31:0] base_br2ctl_wdata_c;
+    wire [31:0] base_br2ctl_rdata_c;
+    wire [19:0] base_br2ctl_addr_c;
+    wire [3:0] base_br2ctl_be_n_c;
+    wire base_br2ctl_ce_n_c;
+    wire base_br2ctl_oe_n_c;
+    wire base_br2ctl_we_n_c;
+
+    wire [31:0] ext_br2ctl_wdata_c;
+    wire [31:0] ext_br2ctl_rdata_c;
+    wire [19:0] ext_br2ctl_addr_c;
+    wire [3:0] ext_br2ctl_be_n_c;
+    wire ext_br2ctl_ce_n_c;
+    wire ext_br2ctl_oe_n_c;
+    wire ext_br2ctl_we_n_c;
+
+
     bridge U_bridge(
         .ifu_wdata_i(32'd0),
-        .ifu_rdata_o(if_inst_c),
-        .ifu_addr_i(if_pc_c),
+        .ifu_rdata_o(if0_inst_c),
+        .ifu_addr_i(if0_nxt_pc_c),
         .ifu_be_n_i(4'd0),
         .ifu_re_n_i(1'b0),
         .ifu_we_n_i(1'b1),
@@ -607,13 +647,13 @@ module top (
         .lsu_req_i(dm_we_c | dm_re_c),
         .lsu_resp_o(lsu_resp_c),
 
-        .base_ram_wdata(base_ram_wdata_c),
-        .base_ram_rdata(base_ram_rdata_c),
-        .base_ram_addr(base_ram_addr_c),
-        .base_ram_be_n(base_ram_be_n_c),
-        .base_ram_ce_n(base_ram_ce_n_c),
-        .base_ram_oe_n(base_ram_oe_n_c),
-        .base_ram_we_n(base_ram_we_n_c),
+        .base_ram_wdata(base_br2ctl_wdata_c),
+        .base_ram_rdata(base_br2ctl_rdata_c),
+        .base_ram_addr(base_br2ctl_addr_c),
+        .base_ram_be_n(base_br2ctl_be_n_c),
+        .base_ram_ce_n(base_br2ctl_ce_n_c),
+        .base_ram_oe_n(base_br2ctl_oe_n_c),
+        .base_ram_we_n(base_br2ctl_we_n_c),
 
         .ext_ram_wdata(ext_ram_wdata_c),
         .ext_ram_rdata(ext_ram_rdata_c),
@@ -631,6 +671,26 @@ module top (
         .uart_rx_data_i (ext_uart_rxbuf_c)
     );
 
+        sram_ctl base_ram_ctl(
+            .clk_i(clk_i),
+            .rst_i(rst_i),
+
+            .re_n_i(base_br2ctl_oe_n_c),
+            .we_n_i(base_br2ctl_we_n_c),
+            // 数据读写 from CPU 
+            .rdata_o(base_br2ctl_rdata_c),
+            .wdata_i(base_br2ctl_wdata_c),
+            .data_be_i(base_br2ctl_be_n_c),
+            .addr_i(base_br2ctl_addr_c),
+
+            .ram_rdata(base_ram_rdata_c),
+            .ram_wdata(base_ram_wdata_c),
+            .ram_addr(base_ram_addr_c), 
+            .ram_be_n(base_ram_be_n_c), 
+            .ram_ce_n(base_ram_ce_n_c), 
+            .ram_oe_n(base_ram_oe_n_c), 
+            .ram_we_n(base_ram_we_n_c)  
+        );
 
 
     //--------------------------{各模块实例化}end----------------------------//
