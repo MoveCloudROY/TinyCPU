@@ -11,6 +11,9 @@ set(LOONG_LAB2_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab2.dbin)
 set(LOONG_LAB3_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab3_verilator.bin)
 set(LOONG_LAB3_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/lab3.dbin)
 
+set(LOONG_PERF_BIN_PATH ${CMAKE_SOURCE_DIR}/assets/perf_verilator.bin)
+set(LOONG_PERF_DBIN_PATH ${CMAKE_SOURCE_DIR}/assets/perf.dbin)
+
 set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

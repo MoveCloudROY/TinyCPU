@@ -72,9 +72,9 @@ module top (
     //            数据通路
     /*================================*/
     // IF->InstRAM 取指令
-    wire [`RegW-1:0] if_pc_c;
+    `NO_TOUCH wire [`RegW-1:0] if_pc_c;
     // IF->IF/ID 构建级间寄存器
-    wire [`RegW-1:0] if_inst_c;
+    `NO_TOUCH wire [`RegW-1:0] if_inst_c;
 
     // ID->Regfile 取值
     wire [`RegW-1:0] rj_data_c;
@@ -83,17 +83,17 @@ module top (
     wire [`RegAddrBusW-1:0] rk_addr_c;
 
     // MEM->DataRAM 访存相关
-    wire [ 31:0] dm_rdata_c;
-    wire [ 31:0] dm_addr_c;
-    wire [  3:0] dm_wbe_n_c;
-    wire [ 31:0] dm_wdata_c;
-    wire         dm_re_c;
-    wire         dm_we_c;
+    `NO_TOUCH wire [ 31:0] dm_rdata_c;
+    `NO_TOUCH wire [ 31:0] dm_addr_c;
+    `NO_TOUCH wire [  3:0] dm_wbe_n_c;
+    `NO_TOUCH wire [ 31:0] dm_wdata_c;
+    `NO_TOUCH wire         dm_re_c;
+    `NO_TOUCH wire         dm_we_c;
 
     // WB->Regfile 写回寄存器
-    wire [  4:0] rf_wdest_c;
-    wire           rf_we_c;
-    wire [ 31:0] rf_wdata_c;
+    `NO_TOUCH wire [  4:0] rf_wdest_c;
+    `NO_TOUCH wire           rf_we_c;
+    `NO_TOUCH wire [ 31:0] rf_wdata_c;
 
     /*================================*/
     //           级间总线信号
@@ -138,9 +138,9 @@ module top (
     wire ctl_wb_allow_in;
 
     // 数据冒险检测信号
-    wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
-    wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
-    wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
     wire [`RegW-1:0] ctl_ex_pc_c;
     wire [`RegW-1:0] ctl_mem_pc_c;
     wire [`RegW-1:0] ctl_wb_pc_c;
