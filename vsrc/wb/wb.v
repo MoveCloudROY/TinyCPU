@@ -30,7 +30,7 @@ module wb(
     wire [`RegW - 1:0] dbg_dm_addr /* verilator public_flat */; 
     
     //pc
-    wire [31:0] pc;    
+    `NO_TOUCH wire [31:0] pc;    
     assign {
         wb_wdest,
         wb_we,

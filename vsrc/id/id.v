@@ -30,8 +30,8 @@ module id(
 
 );
     // 从 IF 获取 PC+4 和 instruction
-    wire [31:0] pc;
-    wire [31:0] inst;
+    `NO_TOUCH wire [31:0] pc;
+    `NO_TOUCH wire [31:0] inst;
     assign {pc, inst} = if2id_bus_ri;
     // assign pc = if_id_pcnow_i;
     // assign inst = if_id_inst_i;
@@ -350,8 +350,8 @@ module id(
     assign br_target = pc + {{14{_2ri16_i16[15]}}, _2ri16_i16, 2'b00};
     
     // jump and branch指令
-    wire jbr_taken;
-    wire [31:0] jbr_target;
+    `NO_TOUCH wire jbr_taken;
+    `NO_TOUCH wire [31:0] jbr_target;
     assign jbr_taken  = (j_taken | br_taken) & ctl_id_over_o; // 要求应当计算完毕，若出现数据竞争，则会回退
     assign jbr_target = j_taken ? j_target : br_target;
     
@@ -363,8 +363,8 @@ module id(
     /*==================================================*/
     wire id_multiply;
     wire [`AluOpW - 1:0] id_aluop;
-    wire [`RegW - 1:0] id_rj;
-    wire [`RegW - 1:0] id_rk;
+    `NO_TOUCH wire [`RegW - 1:0] id_rj;
+    `NO_TOUCH wire [`RegW - 1:0] id_rk;
     wire [5:0] id_mem_ctl;
     wire [`RegW - 1:0] id_mem_st_data;
     wire [`RegAddrBusW-1:0] id_wb_rd_addr;
@@ -431,8 +431,8 @@ module id(
     /*==================================================*/
     //                控制信号与冒险处理
     /*==================================================*/
-    wire rj_hazard;
-    wire rk_hazard;
+    `NO_TOUCH wire rj_hazard;
+    `NO_TOUCH wire rk_hazard;
     wire ex_not_same, mem_not_same, wb_not_same;
 
     assign ex_not_same   = !(pc[21:0] == ctl_ex_pc_i[21:0] );

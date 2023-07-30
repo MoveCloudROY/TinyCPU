@@ -63,8 +63,8 @@ module bridge (
     /*==================================================*/
     //                    Arbiter
     /*==================================================*/
-    wire ifu_tar_base, ifu_tar_ext;
-    wire lsu_tar_base, lsu_tar_ext, lsu_tar_uart;
+    `NO_TOUCH wire ifu_tar_base, ifu_tar_ext;
+    `NO_TOUCH wire lsu_tar_base, lsu_tar_ext, lsu_tar_uart;
 `ifdef VERILATOR 
     assign ifu_tar_base = ((ifu_addr_i[31:22] == 0'b0000000000) | (ifu_addr_i[31:22] == 0'b1000000000)) & ifu_req_i;
     assign ifu_tar_ext  = ((ifu_addr_i[31:22] == 0'b0000000001) | (ifu_addr_i[31:22] == 0'b1000000001)) & ifu_req_i;
@@ -103,10 +103,10 @@ module bridge (
     /*==================================================*/
 
 
-    wire ifu_base_valid;
-    wire lsu_base_valid;
-    wire lsu_ext_valid ;
-    wire lsu_uart_valid;
+    `NO_TOUCH wire ifu_base_valid;
+    `NO_TOUCH wire lsu_base_valid;
+    `NO_TOUCH wire lsu_ext_valid ;
+    `NO_TOUCH wire lsu_uart_valid;
     
     assign ifu_base_valid = ifu_tar_base & ifu_resp_o;
     assign lsu_base_valid = lsu_tar_base & lsu_resp_o;
