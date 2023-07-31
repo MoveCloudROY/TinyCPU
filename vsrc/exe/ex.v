@@ -4,7 +4,7 @@ module ex(
     input  clk_i,      // 时钟
 
     input  [`ID2EXBusSize - 1:0]    id2ex_bus_ri,
-    output [`EX2MEMBusSize - 1:0]   ex2mem_bus_o,
+    output [`EX2MEM0BusSize - 1:0]   ex2mem0_bus_o,
 
     input ctl_ex_valid_i,
     output ctl_ex_over_o,
@@ -83,7 +83,7 @@ module ex(
     //要写入LO的值放在lo_result里，包括MULT和MTLO指令,
     assign exe_result = id_multiply ? product[31:0] : alu_result;
 
-    assign ex2mem_bus_o = {
+    assign ex2mem0_bus_o = {
         // MEM 需要的信号
         id_mem_ctl, id_mem_st_data, // load/store信息和store数据
         exe_result,                 // exe运算结果

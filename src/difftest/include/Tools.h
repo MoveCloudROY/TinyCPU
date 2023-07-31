@@ -239,7 +239,7 @@ void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
 
 
 template <typename T>
-void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208) {
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 1) {
     // 当仿真时为 1（快速），实际设为 5208 速率大致相仿
     auto cpu_step5208 = [&]() {for (int _ = 0; _ < clk; ++_) cpu.step(); };
 
@@ -265,8 +265,8 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208)
     // CPU 完成 load，并执行完当前指令
     while (cpu.nowStatus.uartRxReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
         cpu.step();
-        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
-        print_gpr(cpu.get_gpr());
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
+        // print_gpr(cpu.get_gpr());
         print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
 
@@ -303,7 +303,14 @@ void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
         //     exit(0);
         // }
         serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF);
-
+        if (data == 0x80100000 && i == 0 && cpuRef.isRecording) {
+            cpuRef.stop_record();
+            cpu.stop_record();
+            auto f = fopen("history.txt", "w");
+            forward_compare(cpu, cpuRef, 0, f);
+            fclose(f);
+            exit(0);
+        }
         // cpu.step();
         // cpuRef.step();
         // if (i != size - 1)
@@ -352,8 +359,8 @@ inline uint32_t bit_reverse(uint32_t x) {
 
 template <typename T>
 void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
-    // cpuRef.start_record();
-    // cpu.start_record();
+    cpuRef.start_record();
+    cpu.start_record();
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A");
     uint32_t addr = 0x80100000;
     for (uint32_t i = 0; i < USER_PROGRAM.size(); ++i) {
@@ -361,20 +368,12 @@ void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
         serial_print(cpu, cpuRef, static_cast<uint32_t>(addr + i * 4));
         serial_print(cpu, cpuRef, static_cast<uint32_t>(4));
         serial_print(cpu, cpuRef, static_cast<uint32_t>(bit_reverse(USER_PROGRAM[i])));
+
         print_dbg("[RunA] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
         print_dbg("%c\n0x%08X\n0x%08X\n0x%08X\n", 'A', addr + i * 4, 4, static_cast<uint32_t>(USER_PROGRAM[i]));
     }
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A Complete");
     // print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-
-    // if (cpuRef.isRecording) {
-    //     cpuRef.stop_record();
-    //     cpu.stop_record();
-    //     auto f = fopen("history.txt", "w");
-    //     forward_compare(cpu, cpuRef, 0, f);
-    //     fclose(f);
-    //     exit(0);
-    // }
 }
 template <typename T>
 void sendD(T &cpu, difftest::CpuRefImpl &cpuRef) {

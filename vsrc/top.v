@@ -85,7 +85,7 @@ module top (
     // MEM->DataRAM 访存相关
     `NO_TOUCH wire [ 31:0] dm_rdata_c;
     `NO_TOUCH wire [ 31:0] dm_addr_c;
-    `NO_TOUCH wire [  3:0] dm_wbe_n_c;
+    `NO_TOUCH wire [  3:0] dm_be_n_c;
     `NO_TOUCH wire [ 31:0] dm_wdata_c;
     `NO_TOUCH wire         dm_re_c;
     `NO_TOUCH wire         dm_we_c;
@@ -101,8 +101,12 @@ module top (
     wire [`IF2IDBusSize - 1:0]  if2id_bus_r;
     wire [`ID2EXBusSize - 1:0]  id2ex_bus_c;
     wire [`ID2EXBusSize - 1:0]  id2ex_bus_r;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_c;
-    wire [`EX2MEMBusSize - 1 :0] ex2mem_bus_r;
+    wire [`EX2MEM0BusSize - 1 :0] ex2mem0_bus_c;
+    wire [`EX2MEM0BusSize - 1 :0] ex2mem0_bus_r;
+    wire [`MEM02MEM1BusSize - 1 :0] mem02mem1_bus_c;
+    wire [`MEM02MEM1BusSize - 1 :0] mem02mem1_bus_r;
+    wire [`MEM12MEM2BusSize - 1 :0] mem12mem2_bus_c;
+    wire [`MEM12MEM2BusSize - 1 :0] mem12mem2_bus_r;
     wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_c;
     wire [`MEM2WBBusSize - 1 :0] mem2wb_bus_r;
 
@@ -121,29 +125,43 @@ module top (
     reg ctl_if_valid;
     reg ctl_id_valid;
     reg ctl_ex_valid;
-    reg ctl_mem_valid;
+    reg ctl_mem0_valid;
+    reg ctl_mem1_valid;
+    reg ctl_mem2_valid;
     reg ctl_wb_valid;
     // 5模块执行完成信号,来自各模块的输出
     wire ctl_if_over;
     wire ctl_id_over;
     wire ctl_ex_over;
-    wire ctl_mem_over;
+    wire ctl_mem0_over;
+    wire ctl_mem1_over;
+    wire ctl_mem2_over;
     wire ctl_wb_over;
     // 5模块允许下一级指令进入
     wire ctl_if_allow_nxt_pc;
     wire ctl_if_allow_in;
     wire ctl_id_allow_in;
     wire ctl_ex_allow_in;
-    wire ctl_mem_allow_in;
+    wire ctl_mem0_allow_in;
+    wire ctl_mem1_allow_in;
+    wire ctl_mem2_allow_in;
     wire ctl_wb_allow_in;
 
     // 数据冒险检测信号
     `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_ex_dest_c;
-    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_mem_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_mem0_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_mem1_dest_c;
+    `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_mem2_dest_c;
     `NO_TOUCH wire [`RegAddrBusW-1:0] ctl_wb_dest_c;
     wire [`RegW-1:0] ctl_ex_pc_c;
-    wire [`RegW-1:0] ctl_mem_pc_c;
+    wire [`RegW-1:0] ctl_mem0_pc_c;
+    wire [`RegW-1:0] ctl_mem1_pc_c;
+    wire [`RegW-1:0] ctl_mem2_pc_c;
     wire [`RegW-1:0] ctl_wb_pc_c;
+
+    // 结构冒险
+    wire ctl_mem2_ls_c;
+    wire ctl_mem1_ls_c;
 
 
     // ID->IF 提前跳转总线
@@ -155,8 +173,11 @@ module top (
     assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_jbr_taken);
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
-    assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
-    assign ctl_mem_allow_in = (~ctl_mem_valid | (ctl_mem_over & ctl_wb_allow_in & ( ~(dm_we_c | dm_re_c) | lsu_resp_c) )) ;
+    assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem0_allow_in);
+    // TODO: If Load or Store, must wait for MEM1 done.
+    assign ctl_mem0_allow_in = (~ctl_mem0_valid | (ctl_mem0_over & ctl_mem1_allow_in & ( (~(dm_we_c | dm_re_c) & ~ctl_mem1_ls_c & ~ctl_mem2_ls_c) | lsu_resp_c) )) ;
+    assign ctl_mem1_allow_in = (~ctl_mem1_valid | (ctl_mem1_over & ctl_mem2_allow_in));
+    assign ctl_mem2_allow_in = (~ctl_mem2_valid | (ctl_mem2_over & ctl_wb_allow_in));
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
 
 
@@ -225,9 +246,25 @@ module top (
 
     always @(posedge clk_i) begin
         if (rst_i) begin
-            ctl_mem_valid <= 1'b0;
-        end else if (ctl_mem_allow_in) begin
-            ctl_mem_valid <= ctl_ex_over;
+            ctl_mem0_valid <= 1'b0;
+        end else if (ctl_mem0_allow_in) begin
+            ctl_mem0_valid <= ctl_ex_over;
+        end
+    end
+
+    always @(posedge clk_i) begin
+        if (rst_i) begin
+            ctl_mem1_valid <= 1'b0;
+        end else if (ctl_mem1_allow_in) begin
+            ctl_mem1_valid <= ctl_mem0_over;
+        end
+    end
+
+    always @(posedge clk_i) begin
+        if (rst_i) begin
+            ctl_mem2_valid <= 1'b0;
+        end else if (ctl_mem2_allow_in) begin
+            ctl_mem2_valid <= ctl_mem1_over;
         end
     end
 
@@ -235,7 +272,7 @@ module top (
         if (rst_i) begin
             ctl_wb_valid <= 1'b0;
         end else if (ctl_wb_allow_in) begin
-            ctl_wb_valid <= ctl_mem_over;
+            ctl_wb_valid <= ctl_mem2_over;
         end
     end
 
@@ -284,10 +321,14 @@ module top (
         .id2ex_bus_o(id2ex_bus_c),
 
         .ctl_ex_dest_i(ctl_ex_dest_c),
-        .ctl_mem_dest_i(ctl_mem_dest_c),
+        .ctl_mem0_dest_i(ctl_mem0_dest_c),
+        .ctl_mem1_dest_i(ctl_mem1_dest_c),
+        .ctl_mem2_dest_i(ctl_mem2_dest_c),
         .ctl_wb_dest_i(ctl_wb_dest_c),
         .ctl_ex_pc_i(ctl_ex_pc_c),
-        .ctl_mem_pc_i(ctl_mem_pc_c),
+        .ctl_mem0_pc_i(ctl_mem0_pc_c),
+        .ctl_mem1_pc_i(ctl_mem1_pc_c),
+        .ctl_mem2_pc_i(ctl_mem2_pc_c),
         .ctl_wb_pc_i(ctl_wb_pc_c),
 
         .ctl_if_over_i(ctl_if_over),
@@ -324,7 +365,7 @@ module top (
     ex U_ex(
         .clk_i(clk_i),
         .id2ex_bus_ri(id2ex_bus_r),
-        .ex2mem_bus_o(ex2mem_bus_c),
+        .ex2mem0_bus_o(ex2mem0_bus_c),
 
         .ctl_ex_valid_i(ctl_ex_valid),
         .ctl_ex_over_o(ctl_ex_over),
@@ -332,33 +373,74 @@ module top (
         .ctl_ex_pc_o(ctl_ex_pc_c)
     );
 
-    ex_mem U_ex2mem(
+    ex_mem0 U_ex2mem0(
         .clk_i(clk_i),
         .rst_i(rst_i),
-        .ex2mem_bus_i(ex2mem_bus_c),
-        .ex2mem_bus_ro(ex2mem_bus_r),
+        .ex2mem0_bus_i(ex2mem0_bus_c),
+        .ex2mem0_bus_ro(ex2mem0_bus_r),
 
         .ctl_ex_over_i(ctl_ex_over),
-        .ctl_mem_allow_in_i(ctl_mem_allow_in)
+        .ctl_mem_allow_in_i(ctl_mem0_allow_in)
     );
 
     /*================================*/
     //               MEM
     /*================================*/
-    mem U_mem(
-        .dm_rdata_i(dm_rdata_c),
+    mem0 U_mem0(
+        // .dm_rdata_i(dm_rdata_c),
         .dm_addr_o(dm_addr_c),
-        .dm_wbe_n_o(dm_wbe_n_c),
+        .dm_be_n_o(dm_be_n_c),
         .dm_wdata_o(dm_wdata_c),
         .dm_re_o(dm_re_c),
         .dm_we_o(dm_we_c),
-        .ex2mem_bus_ri(ex2mem_bus_r),
+        .ex2mem0_bus_ri(ex2mem0_bus_r),
+        .mem02mem1_bus_o(mem02mem1_bus_c),
+
+        .ctl_mem0_valid_i(ctl_mem0_valid),
+        .ctl_mem0_over_o(ctl_mem0_over),
+        .ctl_mem0_dest_o(ctl_mem0_dest_c),
+        .ctl_mem0_pc_o(ctl_mem0_pc_c)
+
+    );
+
+    mem0_mem1 U_mem02mem1(
+        .clk_i(clk_i),
+        .rst_i(rst_i),
+        .mem02mem1_bus_i(mem02mem1_bus_c),
+        .mem02mem1_bus_ro(mem02mem1_bus_r)
+    );
+    mem1 U_mem1(
+
+        .mem02mem1_bus_ri(mem02mem1_bus_r),
+        .mem12mem2_bus_o(mem12mem2_bus_c),
+
+        .ctl_mem1_valid_i(ctl_mem1_valid),
+        .ctl_mem1_over_o(ctl_mem1_over),
+        .ctl_mem1_dest_o(ctl_mem1_dest_c),
+        .ctl_mem1_pc_o(ctl_mem1_pc_c),
+        .ctl_mem1_ls_o(ctl_mem1_ls_c)
+
+    );
+    mem1_mem2 U_mem12mem2(
+        .clk_i(clk_i),
+        .rst_i(rst_i),
+        .mem12mem2_bus_i(mem12mem2_bus_c),
+        .mem12mem2_bus_ro(mem12mem2_bus_r)
+    );
+    mem2 U_mem2(
+        .dm_rdata_i(dm_rdata_c),
+        // .dm_be_n_o(dm_be_n_c),
+        // .dm_wdata_o(dm_wdata_c),
+        // .dm_re_o(dm_re_c),
+        // .dm_we_o(dm_we_c),
+        .mem12mem2_bus_ri(mem12mem2_bus_r),
         .mem2wb_bus_o(mem2wb_bus_c),
 
-        .ctl_mem_valid_i(ctl_mem_valid),
-        .ctl_mem_over_o(ctl_mem_over),
-        .ctl_mem_dest_o(ctl_mem_dest_c),
-        .ctl_mem_pc_o(ctl_mem_pc_c)
+        .ctl_mem2_valid_i(ctl_mem2_valid),
+        .ctl_mem2_over_o(ctl_mem2_over),
+        .ctl_mem2_dest_o(ctl_mem2_dest_c),
+        .ctl_mem2_pc_o(ctl_mem2_pc_c),
+        .ctl_mem2_ls_o(ctl_mem2_ls_c)
 
     );
 
@@ -368,7 +450,7 @@ module top (
         .mem2wb_bus_i(mem2wb_bus_c),
         .mem2wb_bus_ro(mem2wb_bus_r),
 
-        .ctl_mem_over_i(ctl_mem_over),
+        .ctl_mem_over_i(ctl_mem2_over),
         .ctl_wb_allow_in_i(ctl_wb_allow_in)
     );
 
@@ -518,7 +600,7 @@ module top (
         end else if(ext_uart_rx_ready) begin
             ext_uart_rxbuf <= ext_uart_rx;
             ext_uart_avai <= 1'b1;
-        end else if(ext_uart_avai & !uart_re_n_c & ctl_mem_over & uart_is_load_data) begin 
+        end else if(ext_uart_avai & !uart_re_n_c & ctl_mem1_over & uart_is_load_data) begin 
             ext_uart_avai <= 0;
         end
     end
@@ -583,11 +665,42 @@ module top (
     // assign dm_rdata_c = ext_ram_data;
     // assign ext_ram_data =  dm_we_c ? dm_wdata_c : 32'bz;
     // assign ext_ram_addr =  dm_addr_c[21:2];
-    // assign ext_ram_be_n =  dm_wbe_n_c;
+    // assign ext_ram_be_n =  dm_be_n_c;
     // assign ext_ram_ce_n =  0;
     // assign ext_ram_oe_n =  ~dm_re_c;
     // assign ext_ram_we_n =  ~dm_we_c;
 `endif
+
+    wire [31:0] mem_ctl_wdata_c;
+    wire [31:0] mem_ctl_rdata_c;
+    wire [31:0] mem_ctl_addr_c;
+    wire [3:0]  mem_ctl_be_n_c;
+    wire mem_ctl_ce_n_c;
+    wire mem_ctl_oe_n_c;
+    wire mem_ctl_we_n_c;
+
+    sram_ctl mem_ctl(
+        .clk_i(clk_i),
+        .rst_i(rst_i),
+
+        .re_n_i(~dm_re_c),
+        .we_n_i(~dm_we_c),
+        .data_be_n_i(dm_be_n_c),
+
+        .rdata_o(dm_rdata_c),
+        .wdata_i(dm_wdata_c),
+
+        .addr_i(dm_addr_c),
+
+        .ram_rdata(mem_ctl_rdata_c),
+        .ram_wdata(mem_ctl_wdata_c),
+        .ram_addr(mem_ctl_addr_c), 
+        .ram_be_n(mem_ctl_be_n_c), 
+        .ram_ce_n(mem_ctl_ce_n_c),
+        .ram_oe_n(mem_ctl_oe_n_c),
+        .ram_we_n(mem_ctl_we_n_c)
+    );
+
     bridge U_bridge(
         .ifu_wdata_i(32'd0),
         .ifu_rdata_o(if_inst_c),
@@ -598,13 +711,13 @@ module top (
         .ifu_req_i(1'b1),
         .ifu_resp_o(ifu_resp_c),
 
-        .lsu_wdata_i(dm_wdata_c),
-        .lsu_rdata_o(dm_rdata_c),
-        .lsu_addr_i(dm_addr_c),
-        .lsu_be_n_i(dm_wbe_n_c),
-        .lsu_re_n_i(~dm_re_c),
-        .lsu_we_n_i(~dm_we_c),
-        .lsu_req_i(dm_we_c | dm_re_c),
+        .lsu_wdata_i(mem_ctl_wdata_c),
+        .lsu_rdata_o(mem_ctl_rdata_c),
+        .lsu_addr_i(mem_ctl_addr_c),
+        .lsu_be_n_i(mem_ctl_be_n_c),
+        .lsu_re_n_i(mem_ctl_oe_n_c),
+        .lsu_we_n_i(mem_ctl_we_n_c),
+        .lsu_req_i(~mem_ctl_oe_n_c | ~mem_ctl_we_n_c),
         .lsu_resp_o(lsu_resp_c),
 
         .base_ram_wdata(base_ram_wdata_c),

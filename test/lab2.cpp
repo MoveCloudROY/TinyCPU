@@ -166,16 +166,26 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
+            // cpuRef.start_record();
+            // cpu.start_record();
             serial_print(cpu, cpuRef, 'T');
-            while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
-                cpu.step();
-            }
 
+            // while (cpu.nowStatus.targetAddr != UART_CTL_ADDR || (cpu.nowStatus.targetData & 0x02) != 0x02 || cpu.lastStatus.pc == cpu.nowStatus.pc) {
+            //     cpu.step();
+            // }
+            // if (cpuRef.isRecording) {
+            //     cpuRef.stop_record();
+            //     cpu.stop_record();
+            //     auto f = fopen("history.txt", "w");
+            //     forward_compare(cpu, cpuRef, 0, f);
+            //     fclose(f);
+            //     exit(0);
+            // }
             // 同步至 CpuRef
-            while (cpu.nowStatus.pc != cpuRef.get_pc()) {
-                cpu.step();
-                // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
-            }
+            // while (cpu.nowStatus.pc != cpuRef.get_pc()) {
+            //     cpu.step();
+            //     // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Sync -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());s
+            // }
         }
 
         if (sendFlag) {

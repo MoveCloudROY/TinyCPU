@@ -76,25 +76,25 @@ module tb (
     //     .UB_n(w_ram_be_n[3])
     // );
 `endif
-    sram_ctl U_sram_ctl(
-        .clk_i(clk_i),
-        .rst_i(rst_i),
-        .start_i(start_i),
-        .rw_i(rw_i),
-        .data_i(data_i),
-        .data_be_i(4'd0),
-        .data_o(data_o),
-        .addr_i(addr_i),
-        .r_ready_o(r_ready_o),
-        .w_finish_o(w_finish_o),
-        .busy_o(busy_o),
+    // sram_ctl U_sram_ctl(
+    //     .clk_i(clk_i),
+    //     .rst_i(rst_i),
+    //     .start_i(start_i),
+    //     .rw_i(rw_i),
+    //     .data_i(data_i),
+    //     .data_be_i(4'd0),
+    //     .data_o(data_o),
+    //     .addr_i(addr_i),
+    //     .r_ready_o(r_ready_o),
+    //     .w_finish_o(w_finish_o),
+    //     .busy_o(busy_o),
 
-        .base_ram_data(w_ram_data), 
-        .base_ram_addr(w_ram_addr),
-        .base_ram_be_n(w_ram_be_n), 
-        .base_ram_ce_n(w_ram_ce_n),      
-        .base_ram_oe_n(w_ram_oe_n),      
-        .base_ram_we_n(w_ram_we_n)       
+    //     .base_ram_data(w_ram_data), 
+    //     .base_ram_addr(w_ram_addr),
+    //     .base_ram_be_n(w_ram_be_n), 
+    //     .base_ram_ce_n(w_ram_ce_n),      
+    //     .base_ram_oe_n(w_ram_oe_n),      
+    //     .base_ram_we_n(w_ram_we_n)       
 
-    );
+    // );
 endmodule

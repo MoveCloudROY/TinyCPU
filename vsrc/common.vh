@@ -54,7 +54,9 @@
 /*==============================================*/
 `define IF2IDBusSize        (2 * `RegW)
 `define ID2EXBusSize        (1 + `AluOpW + 2 * `RegW + 6 + `RegW + `RegAddrBusW + 1 + `RegW)
-`define EX2MEMBusSize       (6 + `RegW + `RegW + `RegAddrBusW + 1 + `RegW)
+`define EX2MEM0BusSize      (6 + `RegW + `RegW + `RegAddrBusW + 1 + `RegW)
+`define MEM02MEM1BusSize    (6 + `RegW + `RegAddrBusW + 1 + `RegW)
+`define MEM12MEM2BusSize    `MEM02MEM1BusSize
 `define MEM2WBBusSize       (5 + 1 + `RegW + `RegW + `RegW)
 
 
