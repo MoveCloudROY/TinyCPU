@@ -239,7 +239,7 @@ void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
 
 
 template <typename T>
-void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 1) {
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208) {
     // 当仿真时为 1（快速），实际设为 5208 速率大致相仿
     auto cpu_step5208 = [&]() {for (int _ = 0; _ < clk; ++_) cpu.step(); };
 

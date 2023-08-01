@@ -162,7 +162,8 @@ module top (
     // 结构冒险
     wire ctl_mem2_ls_c;
     wire ctl_mem1_ls_c;
-    wire ctl_ram_busy_c;
+    wire ctl_ram_ok_c;
+    wire mem_ctl_req_c;
 
 
     // ID->IF 提前跳转总线
@@ -177,7 +178,7 @@ module top (
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem0_allow_in);
     // TODO: If Load or Store, must wait for MEM1 done.
     assign ctl_mem0_allow_in = 
-        ~ctl_mem0_valid | (ctl_mem0_over & ctl_mem1_allow_in & ~ctl_ram_busy_c) ;
+        ~ctl_mem0_valid | (ctl_mem0_over & ctl_mem1_allow_in & ((~(dm_re_c | dm_we_c) & ~ctl_mem1_ls_c & ~ctl_mem2_ls_c) | ctl_ram_ok_c) ) ;
     assign ctl_mem1_allow_in = (~ctl_mem1_valid | (ctl_mem1_over & ctl_mem2_allow_in));
     assign ctl_mem2_allow_in = (~ctl_mem2_valid | (ctl_mem2_over & ctl_wb_allow_in));
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
@@ -692,7 +693,8 @@ module top (
         .wdata_i(dm_wdata_c),
 
         .addr_i(dm_addr_c),
-        .ctl_ram_busy_o(ctl_ram_busy_c),
+        .ctl_ram_ok_o(ctl_ram_ok_c),
+        .mem_ctl_req_o(mem_ctl_req_c),
         .ctl_ram_valid_i(lsu_resp_c),
 
         .ram_rdata(mem_ctl_rdata_c),
@@ -720,7 +722,7 @@ module top (
         .lsu_be_n_i(mem_ctl_be_n_c),
         .lsu_re_n_i(mem_ctl_oe_n_c),
         .lsu_we_n_i(mem_ctl_we_n_c),
-        .lsu_req_i(~mem_ctl_oe_n_c | ~mem_ctl_we_n_c),
+        .lsu_req_i(mem_ctl_req_c | ~mem_ctl_oe_n_c | ~mem_ctl_we_n_c),
         .lsu_resp_o(lsu_resp_c),
 
         .base_ram_wdata(base_ram_wdata_c),

@@ -122,8 +122,8 @@ module bridge (
     assign ifu_rdata_o = ifu_base_valid ? base_ram_rdata
                         : 32'hdeadbeef; 
 
-    assign base_ram_wdata = lsu_base_valid & ~lsu_we_n_i ? lsu_wdata_i
-                        : ifu_base_valid & ~ifu_we_n_i ? ifu_wdata_i
+    assign base_ram_wdata = lsu_base_valid ? lsu_wdata_i
+                        : ifu_base_valid ? ifu_wdata_i
                         : 32'hdeadbeef; 
     assign base_ram_addr = lsu_base_valid ? lsu_addr_i[21:2] : ifu_base_valid ? ifu_addr_i[21:2] : 20'd0;
     assign base_ram_be_n = lsu_base_valid ? lsu_be_n_i : ifu_base_valid ? ifu_be_n_i : 4'b1111;
@@ -131,7 +131,7 @@ module bridge (
     assign base_ram_oe_n = lsu_base_valid ? lsu_re_n_i : ifu_base_valid ? ifu_re_n_i : 1;
     assign base_ram_we_n = lsu_base_valid ? lsu_we_n_i : ifu_base_valid ? ifu_we_n_i : 1;
 
-    assign ext_ram_wdata = lsu_ext_valid & ~lsu_we_n_i ? lsu_wdata_i
+    assign ext_ram_wdata = lsu_ext_valid ? lsu_wdata_i
                         : 32'hdeadbeef; 
     assign ext_ram_addr = lsu_ext_valid ? lsu_addr_i[21:2] : 20'd0;
     assign ext_ram_be_n = lsu_ext_valid ? lsu_be_n_i : 4'b1111;
