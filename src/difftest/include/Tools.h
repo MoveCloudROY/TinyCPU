@@ -262,12 +262,18 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 1) {
     cpu->rxd_i = 1;
     cpu_step5208();
 
+    // CPU 进入 Uart Ready
+    while (!cpu.nowStatus.uartRxReady) {
+        cpu.step();
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Ready for load -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+
     // CPU 完成 load，并执行完当前指令
     while (cpu.nowStatus.uartRxReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
         cpu.step();
         // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
         // print_gpr(cpu.get_gpr());
-        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
 
     // 同步至 Cpu
@@ -281,6 +287,7 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 1) {
 template <typename T>
 void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data) {
     cpuRef.uart.putc(data);
+    cpuRef.step();
     uart_putc(cpu, cpuRef, data);
 }
 
@@ -303,14 +310,14 @@ void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
         //     exit(0);
         // }
         serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF);
-        if (data == 0x80100000 && i == 0 && cpuRef.isRecording) {
-            cpuRef.stop_record();
-            cpu.stop_record();
-            auto f = fopen("history.txt", "w");
-            forward_compare(cpu, cpuRef, 0, f);
-            fclose(f);
-            exit(0);
-        }
+        // if (data == 0x80100000 && i == 3 && cpuRef.isRecording) {
+        //     cpuRef.stop_record();
+        //     cpu.stop_record();
+        //     auto f = fopen("history.txt", "w");
+        //     forward_compare(cpu, cpuRef, 0, f);
+        //     fclose(f);
+        //     exit(0);
+        // }
         // cpu.step();
         // cpuRef.step();
         // if (i != size - 1)
@@ -359,8 +366,8 @@ inline uint32_t bit_reverse(uint32_t x) {
 
 template <typename T>
 void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
-    cpuRef.start_record();
-    cpu.start_record();
+    // cpuRef.start_record();
+    // cpu.start_record();
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A");
     uint32_t addr = 0x80100000;
     for (uint32_t i = 0; i < USER_PROGRAM.size(); ++i) {

@@ -162,6 +162,7 @@ module top (
     // 结构冒险
     wire ctl_mem2_ls_c;
     wire ctl_mem1_ls_c;
+    wire ctl_ram_busy_c;
 
 
     // ID->IF 提前跳转总线
@@ -170,12 +171,13 @@ module top (
     assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
-    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_jbr_taken);
+    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_jbr_taken & ctl_id_allow_in);
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem0_allow_in);
     // TODO: If Load or Store, must wait for MEM1 done.
-    assign ctl_mem0_allow_in = (~ctl_mem0_valid | (ctl_mem0_over & ctl_mem1_allow_in & ( (~(dm_we_c | dm_re_c) & ~ctl_mem1_ls_c & ~ctl_mem2_ls_c) | lsu_resp_c) )) ;
+    assign ctl_mem0_allow_in = 
+        ~ctl_mem0_valid | (ctl_mem0_over & ctl_mem1_allow_in & ~ctl_ram_busy_c) ;
     assign ctl_mem1_allow_in = (~ctl_mem1_valid | (ctl_mem1_over & ctl_mem2_allow_in));
     assign ctl_mem2_allow_in = (~ctl_mem2_valid | (ctl_mem2_over & ctl_wb_allow_in));
     assign ctl_wb_allow_in  = ~ctl_wb_valid  | ctl_wb_over;
@@ -400,7 +402,6 @@ module top (
         .ctl_mem0_over_o(ctl_mem0_over),
         .ctl_mem0_dest_o(ctl_mem0_dest_c),
         .ctl_mem0_pc_o(ctl_mem0_pc_c)
-
     );
 
     mem0_mem1 U_mem02mem1(
@@ -691,6 +692,8 @@ module top (
         .wdata_i(dm_wdata_c),
 
         .addr_i(dm_addr_c),
+        .ctl_ram_busy_o(ctl_ram_busy_c),
+        .ctl_ram_valid_i(lsu_resp_c),
 
         .ram_rdata(mem_ctl_rdata_c),
         .ram_wdata(mem_ctl_wdata_c),

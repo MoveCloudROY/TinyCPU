@@ -14,7 +14,9 @@ module sram_ctl (
     input [31:0] wdata_i,
     // 地址 from CPU
     input [31:0] addr_i,
-
+    
+    output ctl_ram_busy_o,
+    input ctl_ram_valid_i,
 
     // 和 sram 连接完成
     input wire[31:0] ram_rdata,  //BaseRAM数据，低8位与CPLD串口控制器共享
@@ -31,7 +33,6 @@ module sram_ctl (
     RD0     =   2'd1,
     WR0     =   2'd2;
 
-    
 
     reg [1:0] cur_state_r;
     reg [1:0] nxt_state_r;
@@ -42,6 +43,7 @@ module sram_ctl (
     reg ce_n_r;
     reg oe_n_r;
     reg we_n_r, we_n_r_posedge;
+    reg busy;
 
     // 状态转移
     always@(posedge clk_i)  begin
@@ -56,17 +58,23 @@ module sram_ctl (
         case(cur_state_r)
             IDLE: begin
                 if (!re_n_i) 
-                    nxt_state_r = IDLE;
+                    nxt_state_r = RD0;
                 else if(!we_n_i)
                     nxt_state_r = WR0;
                 else
                     nxt_state_r = IDLE;
             end
-            // RD0: begin
-            //     nxt_state_r = IDLE;
-            // end
+            RD0: begin
+                if (ctl_ram_valid_i) 
+                    nxt_state_r = IDLE;
+                else
+                    nxt_state_r = RD0;
+            end
             WR0: begin
-                nxt_state_r = IDLE; 
+                if (ctl_ram_valid_i)
+                    nxt_state_r = IDLE;
+                else
+                    nxt_state_r = WR0;
             end
             default: begin
             end
@@ -82,6 +90,7 @@ module sram_ctl (
             ce_n_r <= 1'b1;
             oe_n_r <= 1'b1;
             we_n_r_posedge <= 1'b1;
+            busy <= 1'b0;
         end else begin
         case(cur_state_r)
             IDLE: begin
@@ -92,6 +101,7 @@ module sram_ctl (
                     oe_n_r <= 1'b0;
                     we_n_r_posedge <= 1'b1;
                     rdata_r <= ram_rdata;
+                    busy <= 1'b1;
                 end else if(!we_n_i) begin
                     addr_r <= addr_i;
                     wdata_r <= wdata_i;
@@ -99,18 +109,21 @@ module sram_ctl (
                     ce_n_r <= 1'b0;
                     oe_n_r <= 1'b1;
                     we_n_r_posedge <= 1'b0; // ?
+                    busy <= 1'b1;
                 end else begin
                     be_n_r <= 4'b1111;
                     ce_n_r <= 1'b1;
                     oe_n_r <= 1'b1;
                     we_n_r_posedge <= 1'b1;
+                    busy <= 1'b0;
                 end
             end
             RD0: begin
-
+                busy <= 1'b0;
             end
             WR0: begin
                 we_n_r_posedge <= 1'b1;
+                busy <= 1'b0;
             end
             default: begin
                 
@@ -130,5 +143,7 @@ module sram_ctl (
     assign ram_ce_n = ce_n_r;
     assign ram_oe_n = oe_n_r;
     assign ram_we_n = we_n_r;
+
+    assign ctl_ram_busy_o = busy ;
 
 endmodule
