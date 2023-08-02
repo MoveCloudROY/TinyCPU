@@ -35,7 +35,7 @@
 #include <termios.h>
 #include <signal.h>
 
-constexpr size_t TRACE_DEEP = 10;
+constexpr size_t TRACE_DEEP = 5;
 
 
 namespace {
@@ -138,7 +138,8 @@ int test_main(int argc, char **argv) {
     //                               初始化结束
     /*=========================================================================*/
 
-
+    uint8_t RefUartTxCh  = 0;
+    uint8_t PracUartTxCh = 0;
     while (running) {
         // Prac CPU 步进
         cpu.step();
@@ -167,13 +168,12 @@ int test_main(int argc, char **argv) {
             ++StayCnt;
         }
 
-        std::string RefUartTxStr{};
-        std::string PracUartTxStr{};
+
         while (cpuRef.uart.exist_tx()) {
             char c = cpuRef.uart.getc();
             if (c != '\r') {
-                RefUartTxStr += c;
-                print_d(CTL_LIGHTBLUE, "[REF.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
+                RefUartTxCh = c;
+                print_d(CTL_LIGHTBLUE, "[REF.UART.TX] " CTL_RESET "Receiving CPU Send: 0x%02X(Ascii: %c)", c, c);
                 fflush(stdout);
             }
         }
@@ -181,13 +181,13 @@ int test_main(int argc, char **argv) {
         while (cpu.exist_tx()) {
             char c = cpu.get_tx_c();
             if (c != '\r') {
-                PracUartTxStr += c;
-                print_d(CTL_LIGHTBLUE, "[Prac.UART.TX] " CTL_RESET "Receiving CPU Send: %c", c);
+                PracUartTxCh = c;
+                print_d(CTL_LIGHTBLUE, "[Prac.UART.TX] " CTL_RESET "Receiving CPU Send: 0x%02X(Ascii: %c)", c, c);
                 fflush(stdout);
             }
         }
 
-        if (PracUartTxStr == ".") {
+        if (RefUartTxCh == '.') {
             cpuRef.start_record();
             cpu.start_record();
 
@@ -198,8 +198,10 @@ int test_main(int argc, char **argv) {
                 800030b4 <UTEST_CRYPTONIGHT>:
             */
             serial_print(cpu, cpuRef, 'G');
-            serial_print(cpu, cpuRef, 0x000030b4);
+            serial_print(cpu, cpuRef, static_cast<uint32_t>(0x00003008));
 
+            RefUartTxCh  = 0;
+            PracUartTxCh = 0;
 
             if (cpuRef.isRecording) {
                 cpuRef.stop_record();
@@ -207,7 +209,12 @@ int test_main(int argc, char **argv) {
                 auto f = fopen("history.txt", "w");
                 forward_compare(cpu, cpuRef, 0, f);
                 fclose(f);
-                exit(0);
+                // exit(0);
+            }
+        } else if (RefUartTxCh == 0x06) {
+            if (PracUartTxCh != 0x06) {
+                print_err("At PracPc = 0x%08X  RefPc = 0x%08X :", cpu.nowStatus.pc, cpuRef.get_pc());
+                print_err("Start mark should be 0x06");
             }
         }
 
