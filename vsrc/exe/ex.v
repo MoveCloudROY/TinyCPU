@@ -60,16 +60,17 @@ module ex(
     wire [63:0] product; 
     wire        mult_end;
     
-    assign mult_start = id_multiply & ctl_ex_valid_i;
-    multiplier multiply_module(
-        .clk_i       (clk_i     ),
-        .mult_start_i(mult_start),
-        .mult_opd1_i (id_rj     ), 
-        .mult_opd2_i (id_rk     ),
-        .product_o   (product   ),
-        .mult_end_o  (mult_end  )
-    );
-
+    // assign mult_start = id_multiply & ctl_ex_valid_i;
+    // multiplier multiply_module(
+    //     .clk_i       (clk_i     ),
+    //     .mult_start_i(mult_start),
+    //     .mult_opd1_i (id_rj     ), 
+    //     .mult_opd2_i (id_rk     ),
+    //     .product_o   (product   ),
+    //     .mult_end_o  (mult_end  )
+    // );
+    assign product =  id_rj * id_rk;
+    assign mult_end = 1'b1;
 
 
     /*==================================================*/
