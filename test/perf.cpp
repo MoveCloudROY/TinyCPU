@@ -137,7 +137,8 @@ int test_main(int argc, char **argv) {
     /*=========================================================================*/
     //                               初始化结束
     /*=========================================================================*/
-
+    cpuRef.start_record();
+    cpu.start_record();
     uint8_t RefUartTxCh  = 0;
     uint8_t PracUartTxCh = 0;
     while (running) {
@@ -157,10 +158,12 @@ int test_main(int argc, char **argv) {
             cpuRef.step();
 
             // 比较状态
+            // if (cpuRef.recentStatus.pc == 0x0000213c && !compare_extram(cpu, cpuRef)) {
+            //     return 1;
+            // }
             if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
-
                 print_history(cpu, cpuRef);
-                print_ext(cpu, cpuRef);
+                compare_extram(cpu, cpuRef);
                 return 1;
                 break;
             }
@@ -187,9 +190,8 @@ int test_main(int argc, char **argv) {
             }
         }
 
-        if (RefUartTxCh == '.') {
-            cpuRef.start_record();
-            cpu.start_record();
+        if (RefUartTxCh == '.' && PracUartTxCh == '.') {
+
 
             /*
                 80003000 <UTEST_SIMPLE>:
@@ -198,7 +200,7 @@ int test_main(int argc, char **argv) {
                 800030b4 <UTEST_CRYPTONIGHT>:
             */
             serial_print(cpu, cpuRef, 'G');
-            serial_print(cpu, cpuRef, static_cast<uint32_t>(0x00003008));
+            serial_print(cpu, cpuRef, static_cast<uint32_t>(0x00003000));
 
             RefUartTxCh  = 0;
             PracUartTxCh = 0;
@@ -212,10 +214,14 @@ int test_main(int argc, char **argv) {
                 // exit(0);
             }
         } else if (RefUartTxCh == 0x06) {
+            print_d(CTL_LIGHTBLUE, "[RunG] " CTL_RESET "Start RunG");
             if (PracUartTxCh != 0x06) {
                 print_err("At PracPc = 0x%08X  RefPc = 0x%08X :", cpu.nowStatus.pc, cpuRef.get_pc());
                 print_err("Start mark should be 0x06");
+                exit(0);
             }
+            RefUartTxCh  = 0;
+            PracUartTxCh = 0;
         }
 
         if (sendFlag) {
@@ -228,7 +234,7 @@ int test_main(int argc, char **argv) {
         // if (StayCnt >= 10) {
         //     print_info("Pass the DiffTest!");
         //     cpu.perfTracer.print();
-        //     print_ext(cpu, cpuRef);
+        //     print_ram(cpu, cpuRef);
         //     return 0;
         //     break;
         // }
@@ -237,11 +243,11 @@ int test_main(int argc, char **argv) {
 
         if (during > 100) {
             print_err("CPU emulation timeout!");
-            print_ext(cpu, cpuRef);
+            print_ram(cpu, cpuRef);
             return 1;
         }
     }
-    print_ext(cpu, cpuRef);
+    print_ram(cpu, cpuRef);
     return 0;
 }
 

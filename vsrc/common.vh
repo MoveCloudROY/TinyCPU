@@ -6,7 +6,7 @@
 /*==============================================*/
 //                   Debug 相关
 /*==============================================*/
-`define VIVADO_DEBUG_ON
+// `define VIVADO_DEBUG_ON
 
 `ifdef VIVADO_DEBUG_ON
     `define NO_TOUCH    (* dont_touch = "yes" *)

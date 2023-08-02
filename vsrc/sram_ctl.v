@@ -131,6 +131,7 @@ module sram_ctl (
             end
             RD0: begin
                 ok <= ctl_ram_valid_i & 1'b1;
+                rdata_r <= ram_rdata;
                 we_n_r_posedge <= 1'b1;
                 req <= 1'b1;
             end
