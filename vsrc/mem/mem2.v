@@ -109,6 +109,6 @@ module mem2(
     /*================================*/
     //              前递
     /*================================*/
-    assign forward_mem2id_data_o = mem_result;
+    assign forward_mem2id_data_o = mem_result & {32{ctl_mem2_valid_i}};
 
 endmodule

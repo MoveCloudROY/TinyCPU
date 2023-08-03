@@ -7,6 +7,7 @@ module ex(
     output [`EX2MEM0BusSize - 1:0]   ex2mem0_bus_o,
 
     output [`RegW-1:0] forward_ex2id_data_o,
+    output forward_ex2id_valid_o,
 
     input ctl_ex_valid_i,
     output ctl_ex_over_o,
@@ -36,6 +37,13 @@ module ex(
         id_wb_rd_addr,
         id_wb_rd_we,
         pc  } = id2ex_bus_ri;
+
+    wire        inst_load;      // load操作
+    wire        inst_store;     // store操作
+    wire        ld_bh_sign;     // load一字节为有符号load
+    wire [2:0]  ld_st_size;     // load/store为 4:byte;2:halfword;1:word
+
+    assign {inst_load,inst_store,ld_bh_sign,ld_st_size} = id_mem_ctl;
 
     /*==================================================*/
     //                      ALU
@@ -110,7 +118,8 @@ module ex(
     /*================================*/
     //              前递
     /*================================*/
-    assign forward_ex2id_data_o = exe_result;
+    assign forward_ex2id_data_o = exe_result & {32{ctl_ex_valid_i}};
+    assign forward_ex2id_valid_o = ~inst_load;
 
 
 endmodule

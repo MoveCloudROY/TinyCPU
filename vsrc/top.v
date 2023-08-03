@@ -174,6 +174,8 @@ module top (
     wire [`RegW-1:0] forward_ex2id_data_c;
     wire [`RegW-1:0] forward_mem2id_data_c;
     wire [`RegW-1:0] forward_wb2id_data_c;
+    wire forward_ex2id_valid_c;
+
 
 
     // ID->IF 提前跳转总线
@@ -347,6 +349,7 @@ module top (
         .forward_ex2id_data_i(forward_ex2id_data_c),
         .forward_mem2id_data_i(forward_mem2id_data_c),
         .forward_wb2id_data_i(forward_wb2id_data_c),
+        .forward_ex2id_valid_i(forward_ex2id_valid_c),
 
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_valid_i(ctl_id_valid),
@@ -384,6 +387,7 @@ module top (
         .id2ex_bus_ri(id2ex_bus_r),
         .ex2mem0_bus_o(ex2mem0_bus_c),
         .forward_ex2id_data_o(forward_ex2id_data_c),
+        .forward_ex2id_valid_o(forward_ex2id_valid_c),
 
         .ctl_ex_valid_i(ctl_ex_valid),
         .ctl_ex_over_o(ctl_ex_over),

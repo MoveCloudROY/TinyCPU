@@ -62,7 +62,7 @@ module wb(
     /*================================*/
     //              前递
     /*================================*/
-    assign forward_wb2id_data_o = mem_result;
+    assign forward_wb2id_data_o = mem_result & {32{ctl_wb_valid_i}};
     
 endmodule
 

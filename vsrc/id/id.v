@@ -30,6 +30,7 @@ module id(
     input [`RegW-1:0] forward_ex2id_data_i ,
     input [`RegW-1:0] forward_mem2id_data_i,
     input [`RegW-1:0] forward_wb2id_data_i ,
+    input forward_ex2id_valid_i,
 
     // 控制信号
     input ctl_if_over_i,
@@ -344,40 +345,38 @@ module id(
     assign mem2_pc_not_same  = !(pc[21:0] == ctl_mem2_pc_i[21:0]);
     assign wb_pc_not_same   = !(pc[21:0] == ctl_wb_pc_i[21:0] );
 
-    assign ex_rj_same   = ex_pc_not_same    && ctl_ex_dest_i == rj_addr_o;
-    assign mem0_rj_same = mem0_pc_not_same  && ctl_mem0_dest_i == rj_addr_o;
-    assign mem1_rj_same = mem1_pc_not_same  && ctl_mem1_dest_i == rj_addr_o;
-    assign mem2_rj_same = mem2_pc_not_same  && ctl_mem2_dest_i == rj_addr_o;
-    assign wb_rj_same   = wb_pc_not_same    && ctl_wb_dest_i == rj_addr_o;
+    assign ex_rj_same   = ex_pc_not_same    & (ctl_ex_dest_i == rj_addr_o);
+    assign mem0_rj_same = mem0_pc_not_same  & (ctl_mem0_dest_i == rj_addr_o);
+    assign mem1_rj_same = mem1_pc_not_same  & (ctl_mem1_dest_i == rj_addr_o);
+    assign mem2_rj_same = mem2_pc_not_same  & (ctl_mem2_dest_i == rj_addr_o);
+    assign wb_rj_same   = wb_pc_not_same    & (ctl_wb_dest_i == rj_addr_o);
 
-    assign ex_rk_same   = ex_pc_not_same    && ctl_ex_dest_i == rk_addr_o;
-    assign mem0_rk_same = mem0_pc_not_same  && ctl_mem0_dest_i == rk_addr_o;
-    assign mem1_rk_same = mem1_pc_not_same  && ctl_mem1_dest_i == rk_addr_o;
-    assign mem2_rk_same = mem2_pc_not_same  && ctl_mem2_dest_i == rk_addr_o;
-    assign wb_rk_same   = wb_pc_not_same    && ctl_wb_dest_i == rk_addr_o;
+    assign ex_rk_same   = ex_pc_not_same    & (ctl_ex_dest_i == rk_addr_o);
+    assign mem0_rk_same = mem0_pc_not_same  & (ctl_mem0_dest_i == rk_addr_o);
+    assign mem1_rk_same = mem1_pc_not_same  & (ctl_mem1_dest_i == rk_addr_o);
+    assign mem2_rk_same = mem2_pc_not_same  & (ctl_mem2_dest_i == rk_addr_o);
+    assign wb_rk_same   = wb_pc_not_same    & (ctl_wb_dest_i == rk_addr_o);
     
 
 
     assign rj_hazard = ~inst_no_rj 
                     & (rj_addr_o != 5'd0)
-                    & (/*ex_rj_same |*/ mem0_rj_same | mem1_rj_same /*| mem2_rj_same | wb_rj_same*/);
+                    & ((~forward_ex2id_valid_i & ex_rj_same) | mem0_rj_same | mem1_rj_same /*| mem2_rj_same | wb_rj_same*/);
     assign rk_hazard = ~inst_no_rk 
                     & (rk_addr_o != 5'd0)
-                    & (/*ex_rk_same |*/ mem0_rk_same | mem1_rk_same /*| mem2_rk_same | wb_rk_same*/);
+                    & ((~forward_ex2id_valid_i & ex_rk_same) | mem0_rk_same | mem1_rk_same /*| mem2_rk_same | wb_rk_same*/);
     
     // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
     assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | ctl_if_over_i);
 
     // 数据多路选择
-    assign rj_data = rj_hazard ? (ex_rj_same ? forward_ex2id_data_i
-                                : mem2_rj_same ? forward_mem2id_data_i
-                                : wb_rj_same ? forward_wb2id_data_i : 32'h00efface)
-                                : rj_data_i;
+    assign rj_data = forward_ex2id_valid_i & ex_rj_same ? forward_ex2id_data_i
+                        : mem2_rj_same ? forward_mem2id_data_i
+                        : wb_rj_same ? forward_wb2id_data_i : rj_data_i;
 
-    assign rk_data = rk_hazard ? (ex_rk_same ? forward_ex2id_data_i
-                                : mem2_rk_same ? forward_mem2id_data_i
-                                : wb_rk_same ? forward_wb2id_data_i : 32'h00efface)
-                                : rk_data_i;
+    assign rk_data = forward_ex2id_valid_i & ex_rk_same ? forward_ex2id_data_i
+                        : mem2_rk_same ? forward_mem2id_data_i
+                        : wb_rk_same ? forward_wb2id_data_i : rk_data_i;
 
 
     /*==================================================*/
