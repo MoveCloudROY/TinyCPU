@@ -68,6 +68,8 @@ module top (
     //                时钟信号定义部分
     /*==================================================*/
     wire locked, clk_cpu, clk_20M;
+    reg reset_of_clk_cpu;
+
     /*==================================================*/
     //                流水数据信号定义部分
     /*==================================================*/
@@ -167,6 +169,11 @@ module top (
     wire ctl_mem1_ls_c;
     wire ctl_ram_ok_c;
     wire mem_ctl_req_c;
+
+    // 前递
+    wire [`RegW-1:0] forward_ex2id_data_c;
+    wire [`RegW-1:0] forward_mem2id_data_c;
+    wire [`RegW-1:0] forward_wb2id_data_c;
 
 
     // ID->IF 提前跳转总线
@@ -337,6 +344,10 @@ module top (
         .ctl_mem2_pc_i(ctl_mem2_pc_c),
         .ctl_wb_pc_i(ctl_wb_pc_c),
 
+        .forward_ex2id_data_i(forward_ex2id_data_c),
+        .forward_mem2id_data_i(forward_mem2id_data_c),
+        .forward_wb2id_data_i(forward_wb2id_data_c),
+
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_valid_i(ctl_id_valid),
         .ctl_id_over_o(ctl_id_over)
@@ -372,6 +383,7 @@ module top (
         .clk_i(clk_i),
         .id2ex_bus_ri(id2ex_bus_r),
         .ex2mem0_bus_o(ex2mem0_bus_c),
+        .forward_ex2id_data_o(forward_ex2id_data_c),
 
         .ctl_ex_valid_i(ctl_ex_valid),
         .ctl_ex_over_o(ctl_ex_over),
@@ -440,6 +452,7 @@ module top (
         // .dm_we_o(dm_we_c),
         .mem12mem2_bus_ri(mem12mem2_bus_r),
         .mem2wb_bus_o(mem2wb_bus_c),
+        .forward_mem2id_data_o(forward_mem2id_data_c),
 
         .ctl_mem2_valid_i(ctl_mem2_valid),
         .ctl_mem2_over_o(ctl_mem2_over),
@@ -468,6 +481,7 @@ module top (
         .rf_we_o(rf_we_c),
         .rf_wdata_o(rf_wdata_c),
         .mem2wb_bus_ri(mem2wb_bus_r),
+        .forward_wb2id_data_o(forward_wb2id_data_c),
         ._occupy_pc_o(),
 
         .ctl_wb_valid_i(ctl_wb_valid),
@@ -529,7 +543,6 @@ module top (
                             // 后级电路复位信号应当由它生成（见下）
     );
 
-    reg reset_of_clk_cpu;
     // 异步复位，同步释放，将locked信号转为后级电路的复位reset_of_clk_cpu
     always@(posedge clk_cpu or negedge locked) begin
         if(~locked) reset_of_clk_cpu <= 1'b1;

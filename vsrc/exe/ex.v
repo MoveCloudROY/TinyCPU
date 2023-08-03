@@ -6,7 +6,7 @@ module ex(
     input  [`ID2EXBusSize - 1:0]    id2ex_bus_ri,
     output [`EX2MEM0BusSize - 1:0]   ex2mem0_bus_o,
 
-    output [`RegW-1:0] forward_ex2id_data,
+    output [`RegW-1:0] forward_ex2id_data_o,
 
     input ctl_ex_valid_i,
     output ctl_ex_over_o,
@@ -110,7 +110,7 @@ module ex(
     /*================================*/
     //              前递
     /*================================*/
-    assign forward_ex2id_data = exe_result;
+    assign forward_ex2id_data_o = exe_result;
 
 
 endmodule

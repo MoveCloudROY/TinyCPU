@@ -3,14 +3,16 @@
 
 module wb(
     
-    output [  4:0] rf_wdest_o /* verilator public_flat */,     // 寄存器写地址
-    output         rf_we_o,       // 寄存器写使能
-    output [ 31:0] rf_wdata_o /* verilator public_flat */,     // 寄存器写数据
+    output [  4:0] rf_wdest_o /* verilator public_flat */,      // 寄存器写地址
+    output         rf_we_o,                                     // 寄存器写使能
+    output [ 31:0] rf_wdata_o /* verilator public_flat */,      // 寄存器写数据
 
     //5级流水新增接口
     
     input  [`MEM2WBBusSize - 1:0] mem2wb_bus_ri, // MEM->WB总线
     output [`RegW - 1:0]          _occupy_pc_o,  // 占位，避免 warning
+
+    output [`RegW-1:0] forward_wb2id_data_o,
 
     input                       ctl_wb_valid_i,
     output                      ctl_wb_over_o,
@@ -57,5 +59,10 @@ module wb(
 
     assign ctl_wb_pc_o = pc;
 
+    /*================================*/
+    //              前递
+    /*================================*/
+    assign forward_wb2id_data_o = mem_result;
+    
 endmodule
 

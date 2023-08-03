@@ -11,6 +11,8 @@ module mem2(
     input      [`MEM12MEM2BusSize - 1:0] mem12mem2_bus_ri,    // EXE->MEM总线
     output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o,     // MEM->WB总线
 
+    output [`RegW-1:0] forward_mem2id_data_o,
+
     input                       ctl_mem2_valid_i,
     output                      ctl_mem2_over_o,
     output [`RegAddrBusW-1:0]   ctl_mem2_dest_o,
@@ -103,5 +105,10 @@ module mem2(
     assign ctl_mem2_pc_o = pc;
 
     assign ctl_mem2_ls_o = inst_load | inst_store;
+
+    /*================================*/
+    //              前递
+    /*================================*/
+    assign forward_mem2id_data_o = mem_result;
 
 endmodule
