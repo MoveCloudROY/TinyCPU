@@ -11,7 +11,9 @@ module mem(
 
     input      [`EX2MEMBusSize - 1:0] ex2mem_bus_ri,    // EXE->MEM总线
     output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o,     // MEM->WB总线
-
+    
+    output [`RegW-1:0] forward_mem2id_data_o,
+    
     input                       ctl_mem_valid_i,
     output                      ctl_mem_over_o,
     output [`RegAddrBusW-1:0]   ctl_mem_dest_o,
@@ -145,6 +147,11 @@ module mem(
     assign ctl_mem_over_o = ctl_mem_valid_i;
 
     assign ctl_mem_pc_o = pc;
+
+    /*================================*/
+    //              前递
+    /*================================*/
+    assign forward_mem2id_data_o = mem_result & {32{ctl_mem_valid_i}};
 
 endmodule
 

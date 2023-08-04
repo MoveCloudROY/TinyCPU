@@ -12,6 +12,8 @@ module wb(
     input  [`MEM2WBBusSize - 1:0] mem2wb_bus_ri, // MEM->WB总线
     output [`RegW - 1:0]          _occupy_pc_o,  // 占位，避免 warning
 
+    output [`RegW-1:0] forward_wb2id_data_o,
+
     input                       ctl_wb_valid_i,
     output                      ctl_wb_over_o,
     output [`RegAddrBusW-1:0]   ctl_wb_dest_o,
@@ -57,5 +59,10 @@ module wb(
 
     assign ctl_wb_pc_o = pc;
 
+    /*================================*/
+    //              前递
+    /*================================*/
+    assign forward_wb2id_data_o = mem_result & {32{ctl_wb_valid_i}};
+    
 endmodule
 

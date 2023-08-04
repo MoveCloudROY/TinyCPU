@@ -33,6 +33,14 @@
 #include <fstream>
 #include <termios.h>
 
+namespace {
+std::function<void(int)> shutdown_handler;
+
+void signal_handler(int signal) {
+    shutdown_handler(signal);
+}
+} // namespace
+
 
 int test_main(int argc, char **argv) {
     srand(time(0));
@@ -79,6 +87,18 @@ int test_main(int argc, char **argv) {
     // 初始化参考实现
     difftest::CpuRefImpl cpuRef{LOONG_BIN_PATH, LOONG_DBIN_PATH, 0, 0, true, false};
 
+    shutdown_handler = [&](int signal) {
+        if (cpuRef.isRecording) {
+            cpuRef.stop_record();
+            cpu.stop_record();
+            auto f = fopen("history.txt", "w");
+            forward_compare(cpu, cpuRef, 0, f);
+            fclose(f);
+        }
+
+        exit(0);
+    };
+    signal(SIGINT, signal_handler);
 
     ThreadRaii uart_input_thread{[&]() {
         termios tmp;
@@ -157,6 +177,7 @@ int test_main(int argc, char **argv) {
         }
 
         while (cpu.exist_tx()) {
+
             char c = cpu.get_tx_c();
             if (c != '\r') {
                 PracUartTxStr += c;
@@ -166,6 +187,7 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
+
             // cpuRef.start_record();
             // cpu.start_record();
             serial_print(cpu, cpuRef, 'T');
