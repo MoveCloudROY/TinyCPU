@@ -15,6 +15,7 @@
 #include <iostream>
 #include <ostream>
 #include <thread>
+#include <type_traits>
 
 
 constexpr const uint32_t UART_DATA_ADDR = 0xbfd003f8;
@@ -62,6 +63,61 @@ inline bool compare_status(const GeneralStatus &pracImpl, const GeneralStatus &r
     std::fprintf(os, CTL_ORIANGE "=================================================" CTL_RESET "\n");
     std::fprintf(os, "%s", pracStr.str().c_str());
     std::fprintf(os, CTL_ORIANGE "PracImpl <<<<<<<<<<<<<<<<< Diff <<<<<<<<<<<<<<<<< PracImpl" CTL_RESET "\n");
+
+    return false;
+}
+
+template <typename T>
+inline bool compare_extram(T &cpu, difftest::CpuRefImpl &cpuRef, uint32_t s_addr = 0x807F0000, uint32_t size = 0x120, bool ignoreUart = 1, FILE *os = stdout) {
+    std::stringstream pracStr, refStr;
+
+    uint32_t ext_s_addr = s_addr - 0x80400000;
+    uint8_t  buff[512];
+    cpuRef.mmio.do_read(s_addr, size, buff);
+
+    bool equ = true;
+    for (int i = 0; i < size / 16; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            auto     pracTmp  = cpu->rootp->top__DOT__U_dram__DOT__mem[ext_s_addr / 4 + i * 4 + j];
+            uint32_t baseAddr = i * 16 + j * 4;
+            uint32_t refTmp   = (buff[baseAddr + 3] << 24) | (buff[baseAddr + 2] << 16) | (buff[baseAddr + 1] << 8) | buff[baseAddr + 0];
+
+            if (pracTmp != refTmp) {
+                equ = false;
+                break;
+            }
+        }
+    }
+
+    if (equ || (ignoreUart && (cpu.lastStatus.targetAddr == UART_CTL_ADDR)))
+        return true;
+
+    pracStr << "          .3.2.1.0  .7.6.5.4  .b.a.9.8  .f.e.d.c\n";
+    refStr << "          .3.2.1.0  .7.6.5.4  .b.a.9.8  .f.e.d.c\n";
+    for (int i = 0; i < size / 16; ++i) {
+        pracStr << std::hex << std::setw(8) << std::setfill('0') << s_addr + i * 16 << ": ";
+        refStr << std::hex << std::setw(8) << std::setfill('0') << s_addr + i * 16 << ": ";
+        for (int j = 0; j < 4; ++j) {
+            auto     pracTmp  = cpu->rootp->top__DOT__U_dram__DOT__mem[ext_s_addr / 4 + i * 4 + j];
+            uint32_t baseAddr = i * 16 + j * 4;
+            uint32_t refTmp   = (buff[baseAddr + 3] << 24) | (buff[baseAddr + 2] << 16) | (buff[baseAddr + 1] << 8) | buff[baseAddr + 0];
+            if (pracTmp != refTmp) {
+                pracStr << CTL_RED << std::hex << std::setw(8) << std::setfill('0') << pracTmp << CTL_RESET << "  ";
+                refStr << CTL_GREEN << std::hex << std::setw(8) << std::setfill('0') << refTmp << CTL_RESET << "  ";
+            } else {
+                pracStr << CTL_RESET << std::hex << std::setw(8) << std::setfill('0') << pracTmp << CTL_RESET << "  ";
+                refStr << CTL_RESET << std::hex << std::setw(8) << std::setfill('0') << refTmp << CTL_RESET << "  ";
+            }
+        }
+        pracStr << '\n';
+        refStr << '\n';
+    }
+
+    std::fprintf(os, CTL_ORIANGE "RefRam  >>>>>>>>>>>>>>>>> RamCheck >>>>>>>>>>>>>>>>> RefRam" CTL_RESET "\n");
+    std::fprintf(os, "%s", refStr.str().c_str());
+    std::fprintf(os, CTL_ORIANGE "=================================================" CTL_RESET "\n");
+    std::fprintf(os, "%s", pracStr.str().c_str());
+    std::fprintf(os, CTL_ORIANGE "PracRam <<<<<<<<<<<<<<<<< RamCheck <<<<<<<<<<<<<<<<< PracRam" CTL_RESET "\n");
 
     return false;
 }
@@ -142,6 +198,37 @@ void print_ext(T &cpu, difftest::CpuRefImpl &cpuRef) {
         std::printf("%02x %02x %02x %02x ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
     }
     std::printf("\n");
+    return;
+}
+
+template <typename T>
+void print_ram(T &cpu, difftest::CpuRefImpl &cpuRef, uint32_t s_addr = 0x807F0000, uint32_t size = 0x120) {
+    uint32_t ext_s_addr = s_addr - 0x80400000;
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("[Ref] 0x%08X ~ 0x%08X", s_addr, s_addr + size);
+    uint8_t buff[1024];
+    cpuRef.mmio.do_read(s_addr, size, buff);
+    for (int i = 0; i < size / 16; ++i) {
+        std::printf("%08X: ", s_addr + i * 16);
+        for (int j = 0; j < 16; ++j) {
+            std::printf("%02X ", buff[i * 16 + j]);
+        }
+        std::printf("\n");
+    }
+
+
+    print_d(CTL_ORIANGE, "===============================================================================" CTL_RESET);
+    print_info("[Prac] 0x%08X ~ 0x%08X", s_addr, s_addr + size);
+    for (int i = 0; i < size / 16; ++i) {
+        std::printf("%08X: ", s_addr + i * 16);
+        for (int j = 0; j < 4; ++j) {
+            auto t = cpu->rootp->top__DOT__U_dram__DOT__mem[ext_s_addr / 4 + i * 4 + j];
+            // std::printf("%08x ", t);
+            std::printf("%02X %02X %02X %02X ", t & 0xFF, (t >> 8) & 0xFF, (t >> 16) & 0xFF, (t >> 24) & 0xFF);
+        }
+        std::printf("\n");
+    }
+
     return;
 }
 
@@ -239,7 +326,7 @@ void serial_scanf(T &cpu, difftest::CpuRefImpl &cpuRef) {
 
 
 template <typename T>
-void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208) {
+void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 1) {
     // 当仿真时为 1（快速），实际设为 5208 速率大致相仿
     auto cpu_step5208 = [&]() {for (int _ = 0; _ < clk; ++_) cpu.step(); };
 
@@ -262,12 +349,18 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208)
     cpu->rxd_i = 1;
     cpu_step5208();
 
+    // CPU 进入 Uart Ready
+    while (!cpu.nowStatus.uartRxReady) {
+        cpu.step();
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Ready for load -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+    }
+
     // CPU 完成 load，并执行完当前指令
     while (cpu.nowStatus.uartRxReady || cpu.lastStatus.pc == cpu.nowStatus.pc) {
         cpu.step();
-        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
-        print_gpr(cpu.get_gpr());
-        print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "ready: %d", cpu.lastStatus.uartRxReady);
+        // print_gpr(cpu.get_gpr());
+        // print_d(CTL_LIGHTBLUE, "[UART.RX] " CTL_RESET "Complete Receiving -- PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
     }
 
     // 同步至 Cpu
@@ -281,6 +374,7 @@ void uart_putc(T &cpu, difftest::CpuRefImpl &cpuRef, char ch, size_t clk = 5208)
 template <typename T>
 void serial_print_u8(T &cpu, difftest::CpuRefImpl &cpuRef, uint8_t data) {
     cpuRef.uart.putc(data);
+    cpuRef.step();
     uart_putc(cpu, cpuRef, data);
 }
 
@@ -303,7 +397,14 @@ void serial_print(T &cpu, difftest::CpuRefImpl &cpuRef, const Td &data) {
         //     exit(0);
         // }
         serial_print_u8(cpu, cpuRef, (data >> (i * 8)) & 0xFF);
-
+        // if (data == 0x80100000 && i == 3 && cpuRef.isRecording) {
+        //     cpuRef.stop_record();
+        //     cpu.stop_record();
+        //     auto f = fopen("history.txt", "w");
+        //     forward_compare(cpu, cpuRef, 0, f);
+        //     fclose(f);
+        //     exit(0);
+        // }
         // cpu.step();
         // cpuRef.step();
         // if (i != size - 1)
@@ -361,20 +462,12 @@ void sendA(T &cpu, difftest::CpuRefImpl &cpuRef) {
         serial_print(cpu, cpuRef, static_cast<uint32_t>(addr + i * 4));
         serial_print(cpu, cpuRef, static_cast<uint32_t>(4));
         serial_print(cpu, cpuRef, static_cast<uint32_t>(bit_reverse(USER_PROGRAM[i])));
+
         print_dbg("[RunA] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
         print_dbg("%c\n0x%08X\n0x%08X\n0x%08X\n", 'A', addr + i * 4, 4, static_cast<uint32_t>(USER_PROGRAM[i]));
     }
     print_d(CTL_LIGHTBLUE, "[RunA] " CTL_RESET "Send A Complete");
     // print_dbg("[Main] PracPc: 0x%08X   RefPc: 0x%08X", cpu.lastStatus.pc, cpuRef.get_pc());
-
-    // if (cpuRef.isRecording) {
-    //     cpuRef.stop_record();
-    //     cpu.stop_record();
-    //     auto f = fopen("history.txt", "w");
-    //     forward_compare(cpu, cpuRef, 0, f);
-    //     fclose(f);
-    //     exit(0);
-    // }
 }
 template <typename T>
 void sendD(T &cpu, difftest::CpuRefImpl &cpuRef) {

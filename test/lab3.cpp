@@ -55,7 +55,7 @@ int test_main(int argc, char **argv) {
 
     srand(time(0));
     // 初始化 ExtRam
-    ramdom_init_ext(LOONG_DBIN_PATH);
+    // ramdom_init_ext(LOONG_DBIN_PATH);
 
 
     // freopen("trace.txt", "w", stdout);
@@ -105,7 +105,12 @@ int test_main(int argc, char **argv) {
     };
 
     shutdown_handler = [&](int signal) {
-        // forward_compare(cpu, cpuRef, 1, stdout);
+        cpuRef.stop_record();
+        cpu.stop_record();
+        auto f = fopen("history.txt", "w");
+        forward_compare(cpu, cpuRef, 0, f);
+        fclose(f);
+
         exit(0);
     };
     signal(SIGINT, signal_handler);
@@ -158,6 +163,13 @@ int test_main(int argc, char **argv) {
             // 比较状态
             if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
 
+                // cpuRef.stop_record();
+                // cpu.stop_record();
+                // auto f = fopen("history.txt", "w");
+                // forward_compare(cpu, cpuRef, 0, f);
+                // fclose(f);
+                // exit(0);
+
                 print_history(cpu, cpuRef);
                 print_ext(cpu, cpuRef);
                 return 1;
@@ -188,11 +200,11 @@ int test_main(int argc, char **argv) {
         }
 
         if (PracUartTxStr == ".") {
+
             cpuRef.start_record();
             cpu.start_record();
 
             sendA(cpu, cpuRef);
-            sendD(cpu, cpuRef);
 
             if (cpuRef.isRecording) {
                 cpuRef.stop_record();
@@ -202,6 +214,9 @@ int test_main(int argc, char **argv) {
                 fclose(f);
                 exit(0);
             }
+            sendD(cpu, cpuRef);
+
+            print_d(CTL_LIGHTBLUE, "[Run.AD] " CTL_RESET "PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
         }
 
         if (sendFlag) {
