@@ -336,19 +336,19 @@ module id(
     wire [`RegW - 1:0] rj_data;
     wire [`RegW - 1:0] rk_data;
 
-    assign ex_pc_not_same   = !(pc[21:0] == ctl_ex_pc_i[21:0] );
-    assign mem_pc_not_same  = !(pc[21:0] == ctl_mem_pc_i[21:0]);
+    assign ex_pc_not_same   = (pc[21:0] ^ ctl_ex_pc_i[21:0]) != 0;
+    assign mem_pc_not_same  = (pc[21:0] ^ ctl_mem_pc_i[21:0]) != 0;
 
-    assign wb_pc_not_same   = !(pc[21:0] == ctl_wb_pc_i[21:0] );
+    assign wb_pc_not_same   = (pc[21:0] ^ ctl_wb_pc_i[21:0] ) != 0;
 
-    assign ex_rj_same   = ex_pc_not_same    & (ctl_ex_dest_i == rj_addr_o);
-    assign mem_rj_same = mem_pc_not_same  & (ctl_mem_dest_i == rj_addr_o);
+    assign ex_rj_same  = ex_pc_not_same   & ((ctl_ex_dest_i ^ rj_addr_o) == 0);
+    assign mem_rj_same = mem_pc_not_same  & ((ctl_mem_dest_i ^ rj_addr_o) == 0);
 
-    assign wb_rj_same   = wb_pc_not_same    & (ctl_wb_dest_i == rj_addr_o);
+    assign wb_rj_same  = wb_pc_not_same   & ((ctl_wb_dest_i ^ rj_addr_o) == 0);
 
-    assign ex_rk_same   = ex_pc_not_same    & (ctl_ex_dest_i == rk_addr_o);
-    assign mem_rk_same = mem_pc_not_same  & (ctl_mem_dest_i == rk_addr_o);
-    assign wb_rk_same   = wb_pc_not_same    & (ctl_wb_dest_i == rk_addr_o);
+    assign ex_rk_same  = ex_pc_not_same   & ((ctl_ex_dest_i ^ rk_addr_o) == 0);
+    assign mem_rk_same = mem_pc_not_same  & ((ctl_mem_dest_i ^ rk_addr_o) == 0);
+    assign wb_rk_same  = wb_pc_not_same   & ((ctl_wb_dest_i ^ rk_addr_o) == 0);
     
     assign rj_zero = (rj_addr_o == 5'd0);
     assign rk_zero = (rk_addr_o == 5'd0);
