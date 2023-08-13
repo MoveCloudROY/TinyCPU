@@ -335,9 +335,15 @@ module top (
     /*================================*/
     //               EXE
     /*================================*/
-
+    wire [`RegW-1:0] mult_A_c;
+    wire [`RegW-1:0] mult_B_c;
+    wire [`RegW-1:0] mult_P_c;
     ex U_ex(
         .clk_i(clk_i),
+        
+        .mult_A_o(mult_A_c),
+        .mult_B_o(mult_B_c),
+
         .id2ex_bus_ri(id2ex_bus_r),
         .ex2mem_bus_o(ex2mem_bus_c),
 
@@ -349,6 +355,27 @@ module top (
         .ctl_ex_dest_o(ctl_ex_dest_c),
         .ctl_ex_pc_o(ctl_ex_pc_c)
     );
+
+    // 乘法器
+    `ifdef VERILATOR 
+        // assign product =  id_rj * id_rk;
+
+        mult_tb muti_module(
+            .CLK(clk_i),
+            .A(mult_A_c),
+            .B(mult_B_c),
+
+            .P(mult_P_c)
+        );
+    `else
+        muti muti_module(
+            .CLK(clk_i),
+            .A(mult_A_c),
+            .B(mult_B_c),
+
+            .P(mult_P_c)
+        );
+    `endif
 
     ex_mem U_ex2mem(
         .clk_i(clk_i),
@@ -397,6 +424,8 @@ module top (
     /*================================*/
 
     wb U_wb(
+        .mult_P_i(mult_P_c),
+
         .rf_wdest_o(rf_wdest_c),
         .rf_we_o(rf_we_c),
         .rf_wdata_o(rf_wdata_c),

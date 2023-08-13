@@ -22,6 +22,7 @@ module mem(
     /*==================================================*/
     //                 级间寄存器信号解析
     /*==================================================*/
+    wire id_multiply;
     //访存需要用到的load/store信息
     wire [5 :0] mem_control;  //MEM需要使用的控制信号
     wire [`RegW - 1:0] store_data;   //store操作的存的数据
@@ -38,6 +39,7 @@ module mem(
     `NO_TOUCH wire [`RegW - 1:0] pc;
 
     assign {
+        id_multiply,
         mem_control,
         store_data,
         exe_result,
@@ -133,6 +135,7 @@ module mem(
     assign mem_result = inst_load ? load_result : exe_result;
     
     assign mem2wb_bus_o = {
+        id_multiply,
         wb_wdest,wb_we,    // WB需要使用的信号
         mem_result,         // 最终要写回寄存器的数据
         dm_addr_o,          // 指令目标地址，DEBUG

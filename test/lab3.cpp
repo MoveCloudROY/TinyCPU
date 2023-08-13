@@ -205,6 +205,8 @@ int test_main(int argc, char **argv) {
             cpu.start_record();
 
             sendA(cpu, cpuRef);
+            sendD(cpu, cpuRef);
+            sendG(cpu, cpuRef);
 
             if (cpuRef.isRecording) {
                 cpuRef.stop_record();
@@ -214,7 +216,7 @@ int test_main(int argc, char **argv) {
                 fclose(f);
                 exit(0);
             }
-            sendD(cpu, cpuRef);
+
 
             print_d(CTL_LIGHTBLUE, "[Run.AD] " CTL_RESET "PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());
         }
