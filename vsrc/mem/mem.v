@@ -13,6 +13,7 @@ module mem(
     output     [`MEM2WBBusSize - 1:0] mem2wb_bus_o,     // MEM->WB总线
     
     output [`RegW-1:0] forward_mem2id_data_o,
+    output             forward_mem2id_valid_o,
     
     input                       ctl_mem_valid_i,
     output                      ctl_mem_over_o,
@@ -155,6 +156,7 @@ module mem(
     //              前递
     /*================================*/
     assign forward_mem2id_data_o = mem_result & {32{ctl_mem_valid_i}};
+    assign forward_mem2id_valid_o = ~id_multiply;
 
 endmodule
 

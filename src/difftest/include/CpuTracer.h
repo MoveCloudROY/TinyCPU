@@ -27,7 +27,9 @@ public:
         top = new T{context.get()};
     }
     ~CpuTracer() {
-        tfp->close();
+        if (wave_on) {
+            tfp->close();
+        }
         delete top;
     }
 

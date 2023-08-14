@@ -154,6 +154,7 @@ module top (
     wire [`RegW-1:0] forward_mem2id_data_c;
     wire [`RegW-1:0] forward_wb2id_data_c;
     wire forward_ex2id_valid_c;
+    wire forward_mem2id_valid_c;
 
 
     // ID->IF 提前跳转总线
@@ -304,6 +305,7 @@ module top (
         .forward_mem2id_data_i(forward_mem2id_data_c),
         .forward_wb2id_data_i(forward_wb2id_data_c),
         .forward_ex2id_valid_i(forward_ex2id_valid_c),
+        .forward_mem2id_valid_i(forward_mem2id_valid_c),
 
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_valid_i(ctl_id_valid),
@@ -368,7 +370,7 @@ module top (
             .P(mult_P_c)
         );
     `else
-        muti muti_module(
+        mult muti_module(
             .CLK(clk_i),
             .A(mult_A_c),
             .B(mult_B_c),
@@ -401,6 +403,7 @@ module top (
         .mem2wb_bus_o(mem2wb_bus_c),
 
         .forward_mem2id_data_o(forward_mem2id_data_c),
+        .forward_mem2id_valid_o(forward_mem2id_valid_c),
 
         .ctl_mem_valid_i(ctl_mem_valid),
         .ctl_mem_over_o(ctl_mem_over),

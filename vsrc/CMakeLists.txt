@@ -43,7 +43,10 @@ verilate(
 verilate(
     vsrc_perf COVERAGE TRACE
     INCLUDE_DIRS "${CMAKE_BINARY_DIR}/../vsrc"
-    VERILATOR_ARGS -x-assign 1 
+    VERILATOR_ARGS -O3
+    VERILATOR_ARGS --noassert 
+    VERILATOR_ARGS --x-initial fast
+    VERILATOR_ARGS --x-assign fast
     VERILATOR_ARGS --timing
     VERILATOR_ARGS +define+LOONG_BIN_PATH=${LOONG_PERF_BIN_PATH}
     VERILATOR_ARGS +define+LOONG_DBIN_PATH=${LOONG_PERF_DBIN_PATH}

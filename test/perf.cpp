@@ -43,7 +43,7 @@ constexpr size_t TRACE_DEEP = 5;
 #define UTEST_CRYPTONIGHT 0x000030b4
 
 
-#define UTEST_SELECT UTEST_MATRIX
+#define UTEST_SELECT UTEST_CRYPTONIGHT
 
 
 namespace {
@@ -181,6 +181,14 @@ int test_main(int argc, char **argv) {
             if (!compare_status(cpu.recentStatus, cpuRef.recentStatus, cpu)) {
                 print_history(cpu, cpuRef);
                 // compare_extram(cpu, cpuRef);
+                if (cpuRef.isRecording) {
+                    cpuRef.stop_record();
+                    cpu.stop_record();
+                    auto f = fopen("history.ansi", "w");
+                    forward_compare(cpu, cpuRef, 0, f);
+                    fclose(f);
+                    // exit(0);
+                }
                 return 1;
                 break;
             }
