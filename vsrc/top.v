@@ -542,7 +542,7 @@ module top (
     
     // assign number = ext_uart_buffer;
     //接收模块,9600无检验位
-    async_receiver #(.ClkFrequency(55000000),.Baud(9600))   
+    async_receiver #(.ClkFrequency(55357140),.Baud(9600))   
         ext_uart_r(
             .clk(clk_i),                      //外部时钟信号
             .RxD(rxd_i),                        //外部串行信号输入
@@ -551,7 +551,7 @@ module top (
             .RxD_data(ext_uart_rx)              //接收到的一字节数据
         );
     //发送模块,9600无检验位
-    async_transmitter #(.ClkFrequency(55000000),.Baud(9600)) 
+    async_transmitter #(.ClkFrequency(55357140),.Baud(9600)) 
         ext_uart_t(
             .clk(clk_i),                      //外部时钟信号
             .TxD_start(!ext_uart_tx_busy & !uart_we_n_c),         //开始发送信号

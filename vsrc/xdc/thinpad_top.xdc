@@ -298,11 +298,11 @@ set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]
 #
 
 
-set cpu_clk [get_clocks -of_objects  [get_ports clk_50M]]
+set cpu_clk [get_clocks -of_objects  [get_pins clock_gen/clk_out1]]
 set ram_input_delay 17
 set ram_output_setup 13
-set ram_we_output_setup 12
-set ram_we_output_hold 1
+set ram_we_output_setup 12.5
+set ram_we_output_hold 0
 
 
 set_input_delay $ram_input_delay -clock $cpu_clk -max [get_ports base_ram_data[*]] 
