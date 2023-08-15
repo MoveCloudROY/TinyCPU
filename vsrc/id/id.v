@@ -195,49 +195,49 @@ module id(
         jirl            
      */
 
-    assign inst_ADD_W   = (_3r_op == `INST_ADD_W);
-    assign inst_SUB_W   = (_3r_op == `INST_SUB_W);
-    assign inst_SLT     = (_3r_op == `INST_SLT);
-    assign inst_SLTU    = (_3r_op == `INST_SLTU);
-    assign inst_NOR     = (_3r_op == `INST_NOR);
-    assign inst_AND     = (_3r_op == `INST_AND);
-    assign inst_OR      = (_3r_op == `INST_OR);
-    assign inst_XOR     = (_3r_op == `INST_XOR);
-    assign inst_SLL_W   = (_3r_op == `INST_SLL_W);
-    assign inst_SRL_W   = (_3r_op == `INST_SRL_W);
-    assign inst_SRA_W   = (_3r_op == `INST_SRA_W);
-    assign inst_MUL_W   = (_3r_op == `INST_MUL_W);
-    assign inst_SLLI_W  = (_3r_op == `INST_SLLI_W);
-    assign inst_SRLI_W  = (_3r_op == `INST_SRLI_W);
-    assign inst_SRAI_W  = (_3r_op == `INST_SRAI_W);
+    assign inst_ADD_W   = ((_3r_op ^ `INST_ADD_W) == 0);
+    assign inst_SUB_W   = ((_3r_op ^ `INST_SUB_W) == 0);
+    assign inst_SLT     = ((_3r_op ^ `INST_SLT) == 0);
+    assign inst_SLTU    = ((_3r_op ^ `INST_SLTU) == 0);
+    assign inst_NOR     = ((_3r_op ^ `INST_NOR) == 0);
+    assign inst_AND     = ((_3r_op ^ `INST_AND) == 0);
+    assign inst_OR      = ((_3r_op ^ `INST_OR) == 0);
+    assign inst_XOR     = ((_3r_op ^ `INST_XOR) == 0);
+    assign inst_SLL_W   = ((_3r_op ^ `INST_SLL_W) == 0);
+    assign inst_SRL_W   = ((_3r_op ^ `INST_SRL_W) == 0);
+    assign inst_SRA_W   = ((_3r_op ^ `INST_SRA_W) == 0);
+    assign inst_MUL_W   = ((_3r_op ^ `INST_MUL_W) == 0);
+    assign inst_SLLI_W  = ((_3r_op ^ `INST_SLLI_W) == 0);
+    assign inst_SRLI_W  = ((_3r_op ^ `INST_SRLI_W) == 0);
+    assign inst_SRAI_W  = ((_3r_op ^ `INST_SRAI_W) == 0);
 
-    assign inst_SLTI    = (_2ri12_op == `INST_SLTI);
-    assign inst_SLTUI   = (_2ri12_op == `INST_SLTUI);
-    assign inst_ADDI_W  = (_2ri12_op == `INST_ADDI_W);
-    assign inst_ANDI    = (_2ri12_op == `INST_ANDI);
-    assign inst_ORI     = (_2ri12_op == `INST_ORI);
-    assign inst_XORI    = (_2ri12_op == `INST_XORI);
-    assign inst_LD_B    = (_2ri12_op == `INST_LD_B);
-    assign inst_LD_H    = (_2ri12_op == `INST_LD_H);
-    assign inst_LD_W    = (_2ri12_op == `INST_LD_W);
-    assign inst_ST_B    = (_2ri12_op == `INST_ST_B);
-    assign inst_ST_H    = (_2ri12_op == `INST_ST_H);
-    assign inst_ST_W    = (_2ri12_op == `INST_ST_W);
-    assign inst_LD_BU   = (_2ri12_op == `INST_LD_BU);
-    assign inst_LD_HU   = (_2ri12_op == `INST_LD_HU);
+    assign inst_SLTI    = ((_2ri12_op ^ `INST_SLTI) == 0);
+    assign inst_SLTUI   = ((_2ri12_op ^ `INST_SLTUI) == 0);
+    assign inst_ADDI_W  = ((_2ri12_op ^ `INST_ADDI_W) == 0);
+    assign inst_ANDI    = ((_2ri12_op ^ `INST_ANDI) == 0);
+    assign inst_ORI     = ((_2ri12_op ^ `INST_ORI) == 0);
+    assign inst_XORI    = ((_2ri12_op ^ `INST_XORI) == 0);
+    assign inst_LD_B    = ((_2ri12_op ^ `INST_LD_B) == 0);
+    assign inst_LD_H    = ((_2ri12_op ^ `INST_LD_H) == 0);
+    assign inst_LD_W    = ((_2ri12_op ^ `INST_LD_W) == 0);
+    assign inst_ST_B    = ((_2ri12_op ^ `INST_ST_B) == 0);
+    assign inst_ST_H    = ((_2ri12_op ^ `INST_ST_H) == 0);
+    assign inst_ST_W    = ((_2ri12_op ^ `INST_ST_W) == 0);
+    assign inst_LD_BU   = ((_2ri12_op ^ `INST_LD_BU) == 0);
+    assign inst_LD_HU   = ((_2ri12_op ^ `INST_LD_HU) == 0);
 
-    assign inst_LU12I_W   = (_1rsi20_op == `INST_LU12I_W);
-    assign inst_PCADDU12I = (_1rsi20_op == `INST_PCADDU12I);
+    assign inst_LU12I_W   = ((_1rsi20_op ^ `INST_LU12I_W) == 0);
+    assign inst_PCADDU12I = ((_1rsi20_op ^ `INST_PCADDU12I) == 0);
 
-    assign inst_JIRL    = (_i26_op == `INST_JIRL);
-    assign inst_B       = (_i26_op == `INST_B);
-    assign inst_BL      = (_i26_op == `INST_BL);
-    assign inst_BEQ     = (_i26_op == `INST_BEQ);
-    assign inst_BNE     = (_i26_op == `INST_BNE);
-    assign inst_BLT     = (_i26_op == `INST_BLT);
-    assign inst_BGE     = (_i26_op == `INST_BGE);
-    assign inst_BLTU    = (_i26_op == `INST_BLTU);
-    assign inst_BGEU    = (_i26_op == `INST_BGEU);
+    assign inst_JIRL    = ((_i26_op ^ `INST_JIRL) == 0);
+    assign inst_B       = ((_i26_op ^ `INST_B) == 0);
+    assign inst_BL      = ((_i26_op ^ `INST_BL) == 0);
+    assign inst_BEQ     = ((_i26_op ^ `INST_BEQ) == 0);
+    assign inst_BNE     = ((_i26_op ^ `INST_BNE) == 0);
+    assign inst_BLT     = ((_i26_op ^ `INST_BLT) == 0);
+    assign inst_BGE     = ((_i26_op ^ `INST_BGE) == 0);
+    assign inst_BLTU    = ((_i26_op ^ `INST_BLTU) == 0);
+    assign inst_BGEU    = ((_i26_op ^ `INST_BGEU) == 0);
 
 
     /*==================================================*/
