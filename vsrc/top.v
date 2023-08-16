@@ -156,6 +156,15 @@ module top (
     wire forward_ex2id_valid_c;
     wire forward_mem2id_valid_c;
 
+    // 分支预测
+    wire [`RegW-1:0] if_predict_pc_c;
+
+    wire [`RegW-1:0] if_predict_targetPc_c;
+    wire if_predict_taken_c;
+    wire if2idBus_predict_suscess_c;
+
+    wire [`RegW-1:0] id_update_targetPc_c;
+    wire id_update_taken_c;
 
     // ID->IF 提前跳转总线
     wire [32:0] jbr_bus_c;
@@ -267,6 +276,21 @@ module top (
         .ctl_if_over_o(ctl_if_over),
         .ctl_if_allow_nxt_pc_i(ctl_if_allow_nxt_pc)
     );
+
+    predictor U_predictor(
+        .clk_i(clk_i),
+        .rst_i(rst_i),
+
+        .if_predict_pc_i(if_predict_pc_c),
+
+        .if_predict_targetPc_o(if_predict_targetPc_c),
+        .if_predict_taken_o(if_predict_taken_c),
+        .if2idBus_predict_suscess_o(if2idBus_predict_suscess_c),
+
+        .id_update_targetPc_i(id_update_targetPc_c),
+        .id_update_taken_i(id_update_taken_c)
+    );
+    
 
     if_id U_if2id(
         .clk_i(clk_i),
