@@ -8,8 +8,9 @@ module predictor (
 
     output [`RegW-1:0] if_predict_targetPc_o,
     output wire if_predict_taken_o,
-    output wire if2idBus_predict_suscess_o,
+    output wire if_predict_failed_o,
 
+    input [`RegW-1:0] id_update_pc_i, 
     input [`RegW-1:0] id_update_targetPc_i,
     input wire id_update_taken_i
 );
@@ -20,8 +21,6 @@ module predictor (
     WEAK_TAKEN       =  2'b10,
     STRONG_TAKEN     =  2'b11;
 
-    reg [1:0] state;
-    reg [1:0] nxt_state;
     
     /*
         32bit PC
@@ -41,21 +40,24 @@ module predictor (
     wire [1:0] current_prediction;
     assign current_prediction = pd_history[pd_index];
 
-    // Prediction is valid or not
-    wire current_valid;
-    assign current_valid = pd_valid[pd_index];
-
     // Prediction target pc addr
     wire [`RegW-1:0] current_targetPc;
     assign current_targetPc = pd_targetPc[pd_index];
 
     // Predict whether the branch will be taken or not
-    assign if_predict_taken_o           = current_prediction[1];
-    assign if_predict_targetPc_o        = current_targetPc;
+    assign if_predict_taken_o     = pd_valid[pd_index] & current_prediction[1];
+    assign if_predict_targetPc_o  = current_targetPc;
 
     wire prediction_isFailed;
     assign prediction_isFailed = current_prediction[1] ^ id_update_taken_i;
-    assign if2idBus_predict_suscess_o   = ~prediction_isFailed;
+    assign if_predict_failed_o  = prediction_isFailed;
+
+    wire [7:2] update_index;
+    assign update_index = id_update_pc_i[7:2];
+
+    // Prediction is valid or not
+    wire update_valid;
+    assign update_valid = pd_valid[update_index];
 
     // Update the predictor based on actual outcome
     always @(posedge clk_i) begin
@@ -64,10 +66,10 @@ module predictor (
                 pd_history[i] <= STRONG_NOT_TAKEN;
             end
         end else begin
-            if (current_valid) begin
+            if (update_valid) begin
                 if (prediction_isFailed) begin
                     // If prediction failed, valid is 0
-                    pd_valid[pd_index] <= 1'b0;
+                    pd_valid[update_index] <= 1'b0;
                 end else begin
                     // else Update as
                     /*
@@ -78,21 +80,21 @@ module predictor (
                         11 ---> 10 ---> 00 ---> 00
                     */
                     if (id_update_taken_i) begin
-                        if (pd_history[pd_index] < STRONG_TAKEN)
-                            pd_history[pd_index] <= {pd_history[pd_index][0], 1'b1};
+                        if (pd_history[update_index] < STRONG_TAKEN)
+                            pd_history[update_index] <= {pd_history[update_index][0], 1'b1};
                     end else begin
-                        if (pd_history[pd_index] > STRONG_NOT_TAKEN)
-                            pd_history[pd_index] <= {pd_history[pd_index][0], 1'b0};
+                        if (pd_history[update_index] > STRONG_NOT_TAKEN)
+                            pd_history[update_index] <= {pd_history[update_index][0], 1'b0};
                     end
                 end
-            end else if (/*!current_valid &&*/ id_update_taken_i) begin
+            end else if (/*!update_valid &&*/ id_update_taken_i) begin
                 // Enable valid of this line
                 // Reset 2bit counter and Update history Pc addr 
-                pd_valid[pd_index] <= 1'b1;
-                pd_history[pd_index] <= STRONG_NOT_TAKEN;
-                pd_targetPc[pd_index] <= id_update_targetPc_i;
+                pd_valid[update_index] <= 1'b1;
+                pd_history[update_index] <= STRONG_NOT_TAKEN;
+                pd_targetPc[update_index] <= id_update_targetPc_i;
             end /*
-            else if (!current_valid && !id_update_taken_i) begin
+            else if (!update_valid && !id_update_taken_i) begin
                 // Not update
             end */
         end

@@ -161,8 +161,9 @@ module top (
 
     wire [`RegW-1:0] if_predict_targetPc_c;
     wire if_predict_taken_c;
-    wire if2idBus_predict_suscess_c;
+    wire if_predict_failed_c;
 
+    wire [`RegW-1:0] id_update_pc_c;
     wire [`RegW-1:0] id_update_targetPc_c;
     wire id_update_taken_c;
 
@@ -172,7 +173,7 @@ module top (
     assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
-    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_jbr_taken);
+    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (if_predict_failed_c);
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
@@ -272,6 +273,13 @@ module top (
         .jbr_bus_i(jbr_bus_c),
         .if_pc_o(if_pc_c),
 
+        .if_predict_pc_o(if_predict_pc_c),
+        .if_predict_targetPc_i(if_predict_targetPc_c),
+        .if_predict_taken_i(if_predict_taken_c),
+
+        .if_predict_failed_i(if_predict_failed_c),
+        .id_update_targetPc_i(id_update_targetPc_c),
+
         .ctl_if_valid_i(ctl_if_valid),
         .ctl_if_over_o(ctl_if_over),
         .ctl_if_allow_nxt_pc_i(ctl_if_allow_nxt_pc)
@@ -285,8 +293,9 @@ module top (
 
         .if_predict_targetPc_o(if_predict_targetPc_c),
         .if_predict_taken_o(if_predict_taken_c),
-        .if2idBus_predict_suscess_o(if2idBus_predict_suscess_c),
+        .if_predict_failed_o(if_predict_failed_c),
 
+        .id_update_pc_i(id_update_pc_c),
         .id_update_targetPc_i(id_update_targetPc_c),
         .id_update_taken_i(id_update_taken_c)
     );
@@ -298,6 +307,7 @@ module top (
         .if_pc_i(if_pc_c),
         .if_inst_i(if_inst_c),
         .if2id_bus_ro(if2id_bus_r),
+        .if_predict_failed_i(if_predict_failed_c),
 
         .ctl_baseram_hazard(~ifu_resp_c),
         .ctl_jbr_taken_i(ctl_jbr_taken),
@@ -317,6 +327,10 @@ module top (
         .jbr_bus_o(jbr_bus_c),
         .if2id_bus_ri(if2id_bus_r),
         .id2ex_bus_o(id2ex_bus_c),
+
+        .id_update_pc_o(id_update_pc_c),
+        .id_update_targetPc_o(id_update_targetPc_c),
+        .id_update_taken_o(id_update_taken_c),
 
         .ctl_ex_dest_i(ctl_ex_dest_c),
         .ctl_mem_dest_i(ctl_mem_dest_c),

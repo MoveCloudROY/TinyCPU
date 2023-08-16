@@ -14,6 +14,11 @@ module id(
     // return to IF for jump
     output [32:0] jbr_bus_o,
 
+    // 分支预测
+    output [`RegW-1:0]      id_update_pc_o,
+    output [`RegW-1:0]      id_update_targetPc_o,
+    output                  id_update_taken_o,
+
     // 数据竞争处理
     input [`RegAddrBusW-1:0] ctl_wb_dest_i,
     input [`RegAddrBusW-1:0] ctl_mem_dest_i,
@@ -414,6 +419,10 @@ module id(
     `NO_TOUCH wire [31:0] jbr_target;
     assign jbr_taken  = (j_taken | br_taken) & ctl_id_over_o; // 要求应当计算完毕，若出现数据竞争，则会回退
     assign jbr_target = j_taken ? j_target : br_target;
+
+    assign id_update_pc_o = pc;
+    assign id_update_taken_o = jbr_taken;
+    assign id_update_targetPc_o = jbr_target;
     
     // ID到IF的跳转总线
     assign jbr_bus_o = {jbr_taken, jbr_target};
