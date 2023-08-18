@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ldscript="linker.ld"
-opt="-O3"
+opt="-Wall -O3"
 
 
 # Get the directory path where the shell script is located
@@ -51,10 +51,10 @@ for file_path in "${@:1:(( $# > 1 ? $# - 1 : $# ))}"; do
 
     # Compile the file to an object file
     if [ "$extension" == "c" ]; then
-        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -mabi=ilp32s -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -o "$filename.S" -S "$full_path"
-        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -mabi=ilp32s -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -o "$filename.o" "$full_path"
+        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -o "$filename.S" -S "$full_path"
+        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -o "$filename.o" "$full_path"
     else
-        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -mabi=ilp32s -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -c -o "$filename.o" "$full_path"
+        loongarch32r-linux-gnusf-gcc ${opt} -fno-pie -fno-builtin -nostdinc -nostdlib -ffreestanding -nostartfiles --sysroot=${LOONGTARGETSYSROOT} -c -o "$filename.o" "$full_path"
     fi
 
     # Check if the compilation was successful

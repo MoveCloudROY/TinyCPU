@@ -10,7 +10,7 @@ module pc_reg(
     input [`RegW-1:0] if_predict_targetPc_i,
     input if_predict_taken_i,
     input if_predict_failed_i,
-    input [`RegW-1:0] id_update_targetPc_i,
+    input [`RegW-1:0] if_flush_pc_i,
 
     input ctl_if_allow_nxt_pc_i,
     input ctl_if_valid_i,
@@ -36,7 +36,7 @@ module pc_reg(
     assign seq_pc[`RegW-1:2]    = pc[`RegW-1:2] + 1'b1;  // 下一指令地址：PC = PC + 4
     assign seq_pc[1:0]     = pc[1:0];
 
-    assign next_pc = if_predict_failed_i ? id_update_targetPc_i
+    assign next_pc = if_predict_failed_i ? if_flush_pc_i
                         : if_predict_taken_i ? if_predict_targetPc_i : seq_pc;
 
     always @(posedge clk_i) begin

@@ -158,11 +158,12 @@ module top (
 
     // 分支预测
     wire [`RegW-1:0] if_predict_pc_c;
-
     wire [`RegW-1:0] if_predict_targetPc_c;
     wire if_predict_taken_c;
     wire if_predict_failed_c;
+    wire [`RegW-1:0] if_flush_pc_c;
 
+    wire id_update_isJumpInst_c;
     wire [`RegW-1:0] id_update_pc_c;
     wire [`RegW-1:0] id_update_targetPc_c;
     wire id_update_taken_c;
@@ -278,7 +279,7 @@ module top (
         .if_predict_taken_i(if_predict_taken_c),
 
         .if_predict_failed_i(if_predict_failed_c),
-        .id_update_targetPc_i(id_update_targetPc_c),
+        .if_flush_pc_i(if_flush_pc_c),
 
         .ctl_if_valid_i(ctl_if_valid),
         .ctl_if_over_o(ctl_if_over),
@@ -294,7 +295,9 @@ module top (
         .if_predict_targetPc_o(if_predict_targetPc_c),
         .if_predict_taken_o(if_predict_taken_c),
         .if_predict_failed_o(if_predict_failed_c),
+        .if_flush_pc_o(if_flush_pc_c),
 
+        .id_update_isJumpInst_i(id_update_isJumpInst_c),
         .id_update_pc_i(id_update_pc_c),
         .id_update_targetPc_i(id_update_targetPc_c),
         .id_update_taken_i(id_update_taken_c)
@@ -328,6 +331,7 @@ module top (
         .if2id_bus_ri(if2id_bus_r),
         .id2ex_bus_o(id2ex_bus_c),
 
+        .id_update_isJumpInst_o(id_update_isJumpInst_c),
         .id_update_pc_o(id_update_pc_c),
         .id_update_targetPc_o(id_update_targetPc_c),
         .id_update_taken_o(id_update_taken_c),

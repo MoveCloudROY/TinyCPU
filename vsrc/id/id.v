@@ -15,6 +15,7 @@ module id(
     output [32:0] jbr_bus_o,
 
     // 分支预测
+    output                  id_update_isJumpInst_o,
     output [`RegW-1:0]      id_update_pc_o,
     output [`RegW-1:0]      id_update_targetPc_o,
     output                  id_update_taken_o,
@@ -420,6 +421,7 @@ module id(
     assign jbr_taken  = (j_taken | br_taken) & ctl_id_over_o; // 要求应当计算完毕，若出现数据竞争，则会回退
     assign jbr_target = j_taken ? j_target : br_target;
 
+    assign id_update_isJumpInst_o = inst_jbr;
     assign id_update_pc_o = pc;
     assign id_update_taken_o = jbr_taken;
     assign id_update_targetPc_o = jbr_target;
