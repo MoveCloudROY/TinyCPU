@@ -50,6 +50,8 @@ module predictor (
     assign if_predict_taken_o     = current_prediction[1];
     assign if_predict_targetPc_o  = current_targetPc;
 
+    reg stall;
+
     wire [7:2] update_index;
     assign update_index = id_update_pc_i[7:2];
     wire [1:0] update_history;
@@ -71,7 +73,7 @@ module predictor (
     // Prediction is valid or not
     // wire update_valid;
     // assign update_valid = pd_valid[update_index];
-    reg stall;
+    
     always @(posedge clk_i) begin
         if (rst_i) begin
             stall <= 1'b0;
@@ -80,9 +82,11 @@ module predictor (
         end
     end
     // Update the predictor based on actual outcome
+    integer i;
     always @(posedge clk_i) begin
         if (rst_i) begin
-            for (int i = 0; i < NUM_ENTRIES; i = i + 1) begin
+            
+            for (i = 0; i < NUM_ENTRIES; i = i + 1) begin
                 pd_history[i] <= STRONG_NOT_TAKEN;
             end
         end else begin
