@@ -30,13 +30,13 @@ module predictor (
         [5:2]
         predict 16 instructions
     */
-    // reg         pd_valid        [NUM_ENTRIES-1:0];
-    reg [1:0]   pd_history      [NUM_ENTRIES-1:0];
-    reg [31:0]  pd_targetPc     [NUM_ENTRIES-1:0];
+    // reg         pd_valid        [(2**`BtbLen)-1:0];
+    reg [1:0]   pd_history      [(2**`BtbLen)-1:0];
+    reg [31:0]  pd_targetPc     [(2**`BtbLen)-1:0];
 
     // Index into the predictor table
-    wire [7:2] pd_index;
-    assign pd_index = if_predict_pc_i[7:2];
+    wire [`BtbLen+1:2] pd_index;
+    assign pd_index = if_predict_pc_i[`BtbLen+1:2];
 
     // Current prediction for the branch
     wire [1:0] current_prediction;
@@ -52,8 +52,8 @@ module predictor (
 
     reg stall;
 
-    wire [7:2] update_index;
-    assign update_index = id_update_pc_i[7:2];
+    wire [`BtbLen+1:2] update_index;
+    assign update_index = id_update_pc_i[`BtbLen+1:2];
     wire [1:0] update_history;
     assign update_history = pd_history[update_index];
     wire [`RegW-1:0] update_targetPc;
@@ -86,7 +86,7 @@ module predictor (
     always @(posedge clk_i) begin
         if (rst_i) begin
             
-            for (i = 0; i < NUM_ENTRIES; i = i + 1) begin
+            for (i = 0; i < (2**`BtbLen); i = i + 1) begin
                 pd_history[i] <= STRONG_NOT_TAKEN;
             end
         end else begin
