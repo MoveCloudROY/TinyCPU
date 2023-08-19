@@ -1,7 +1,8 @@
-#include <utility>
-#include <vector>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+#include <utility>
+#include <vector>
+
 
 #include "CpuRefImpl.h"
 #include "CpuTracer.h"
@@ -84,6 +85,7 @@ int test_main(int argc, char **argv) {
             std::end(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
             gpr.begin()
         );
+        gpr[0] = 0;
         return gpr;
     });
 
@@ -206,7 +208,7 @@ int test_main(int argc, char **argv) {
 
             sendA(cpu, cpuRef);
             sendD(cpu, cpuRef);
-            sendG(cpu, cpuRef);
+
 
             if (cpuRef.isRecording) {
                 cpuRef.stop_record();
@@ -216,6 +218,7 @@ int test_main(int argc, char **argv) {
                 fclose(f);
                 exit(0);
             }
+            sendG(cpu, cpuRef);
 
 
             print_d(CTL_LIGHTBLUE, "[Run.AD] " CTL_RESET "PracPc: 0x%08X   RefPc: 0x%08X", cpu.nowStatus.pc, cpuRef.get_pc());

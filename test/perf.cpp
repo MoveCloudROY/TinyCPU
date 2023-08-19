@@ -92,10 +92,11 @@ int test_main(int argc, char **argv) {
             std::end(cpu->rootp->top__DOT__U_reg_file__DOT__regfile.m_storage),
             gpr.begin()
         );
+        gpr[0] = 0;
         return gpr;
     });
 
-    cpu.enable_trace("top.vcd");
+    // cpu.enable_trace("top.vcd");
     cpu.reset_all();
 
     bool sendFlag = false;

@@ -54,11 +54,17 @@ module predictor (
     assign update_index = id_update_pc_i[7:2];
     wire [1:0] update_history;
     assign update_history = pd_history[update_index];
-
+    wire [`RegW-1:0] update_targetPc;
+    assign update_targetPc = pd_targetPc[update_index];
+    wire prediction_pcIsFailed;
+    assign prediction_pcIsFailed = update_history[1] & id_update_taken_i & ((update_targetPc ^ id_update_targetPc_i) != 0);
     wire prediction_isFailed;
-    assign prediction_isFailed = (update_history[1] ^ id_update_taken_i) & id_update_isJumpInst_i;
+    assign prediction_isFailed = ((update_history[1] ^ id_update_taken_i) 
+                                    | prediction_pcIsFailed)
+                                    & id_update_isJumpInst_i
+                                | (update_history[1] & ~id_update_isJumpInst_i & ~stall);
     assign if_predict_failed_o  = prediction_isFailed;
-    assign if_flush_pc_o = update_history[1] ? 
+    assign if_flush_pc_o = update_history[1] & ~prediction_pcIsFailed ? 
                             id_update_pc_i + 32'd4 : id_update_targetPc_i;
 
 
