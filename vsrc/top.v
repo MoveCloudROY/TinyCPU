@@ -174,7 +174,7 @@ module top (
     assign ctl_jbr_taken = jbr_bus_c[32];
 
     // 各级允许进入信号:本级无效，或本级执行完成且下级允许进入
-    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (if_predict_failed_c);
+    assign ctl_if_allow_nxt_pc = (ctl_if_over & ctl_id_allow_in & ifu_resp_c) | (ctl_id_over & if_predict_failed_c);
     assign ctl_if_allow_in  = ctl_if_over & ctl_id_allow_in & ifu_resp_c;
     assign ctl_id_allow_in  = ~ctl_id_valid  | (ctl_id_over  & ctl_ex_allow_in );
     assign ctl_ex_allow_in  = ~ctl_ex_valid  | (ctl_ex_over  & ctl_mem_allow_in);
@@ -300,7 +300,9 @@ module top (
         .id_update_isJumpInst_i(id_update_isJumpInst_c),
         .id_update_pc_i(id_update_pc_c),
         .id_update_targetPc_i(id_update_targetPc_c),
-        .id_update_taken_i(id_update_taken_c)
+        .id_update_taken_i(id_update_taken_c),
+
+        .ifu_resp_i(ifu_resp_c)
     );
     
 

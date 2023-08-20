@@ -14,7 +14,9 @@ module predictor (
     input id_update_isJumpInst_i,
     input [`RegW-1:0] id_update_pc_i, 
     input [`RegW-1:0] id_update_targetPc_i,
-    input wire id_update_taken_i
+    input wire id_update_taken_i,
+
+    input ifu_resp_i
 );
     parameter NUM_ENTRIES = 64;
     localparam [1:0]

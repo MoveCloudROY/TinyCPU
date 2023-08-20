@@ -369,6 +369,7 @@ module id(
                     & ((~forward_ex2id_valid_i & ex_rk_same) | (~forward_mem2id_valid_i & mem_rk_same) /*| wb_rk_same*/);
     
     // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
+    // TODO: Maybe have bugs when jbr is depends on rj or rk;
     assign ctl_id_over_o = ctl_id_valid_i & ~rj_hazard & ~rk_hazard & (~inst_jbr | ctl_if_over_i);
 
     // 数据多路选择
