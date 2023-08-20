@@ -154,7 +154,6 @@ module top (
     wire [`RegW-1:0] forward_mem2id_data_c;
     wire [`RegW-1:0] forward_wb2id_data_c;
     wire forward_ex2id_valid_c;
-    wire forward_mem2id_valid_c;
 
     // 分支预测
     wire [`RegW-1:0] if_predict_pc_c;
@@ -349,8 +348,7 @@ module top (
         .forward_mem2id_data_i(forward_mem2id_data_c),
         .forward_wb2id_data_i(forward_wb2id_data_c),
         .forward_ex2id_valid_i(forward_ex2id_valid_c),
-        .forward_mem2id_valid_i(forward_mem2id_valid_c),
-
+        
         .ctl_if_over_i(ctl_if_over),
         .ctl_id_valid_i(ctl_id_valid),
         .ctl_id_over_o(ctl_id_over)
@@ -381,15 +379,9 @@ module top (
     /*================================*/
     //               EXE
     /*================================*/
-    wire [`RegW-1:0] mult_A_c;
-    wire [`RegW-1:0] mult_B_c;
-    wire [`RegW-1:0] mult_P_c;
+    
     ex U_ex(
         .clk_i(clk_i),
-        
-        .mult_A_o(mult_A_c),
-        .mult_B_o(mult_B_c),
-
         .id2ex_bus_ri(id2ex_bus_r),
         .ex2mem_bus_o(ex2mem_bus_c),
 
@@ -401,27 +393,6 @@ module top (
         .ctl_ex_dest_o(ctl_ex_dest_c),
         .ctl_ex_pc_o(ctl_ex_pc_c)
     );
-
-    // 乘法器
-    `ifdef VERILATOR 
-        // assign product =  id_rj * id_rk;
-
-        mult_tb muti_module(
-            .CLK(clk_i),
-            .A(mult_A_c),
-            .B(mult_B_c),
-
-            .P(mult_P_c)
-        );
-    `else
-        mult muti_module(
-            .CLK(clk_i),
-            .A(mult_A_c),
-            .B(mult_B_c),
-
-            .P(mult_P_c)
-        );
-    `endif
 
     ex_mem U_ex2mem(
         .clk_i(clk_i),
@@ -447,8 +418,7 @@ module top (
         .mem2wb_bus_o(mem2wb_bus_c),
 
         .forward_mem2id_data_o(forward_mem2id_data_c),
-        .forward_mem2id_valid_o(forward_mem2id_valid_c),
-
+        
         .ctl_mem_valid_i(ctl_mem_valid),
         .ctl_mem_over_o(ctl_mem_over),
         .ctl_mem_dest_o(ctl_mem_dest_c),
@@ -471,8 +441,6 @@ module top (
     /*================================*/
 
     wb U_wb(
-        .mult_P_i(mult_P_c),
-
         .rf_wdest_o(rf_wdest_c),
         .rf_we_o(rf_we_c),
         .rf_wdata_o(rf_wdata_c),

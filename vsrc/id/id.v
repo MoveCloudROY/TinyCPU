@@ -33,8 +33,7 @@ module id(
     input [`RegW-1:0] forward_mem2id_data_i,
     input [`RegW-1:0] forward_wb2id_data_i ,
     input forward_ex2id_valid_i,
-    input forward_mem2id_valid_i,
-
+    
     // 控制信号
     input ctl_if_over_i,
     input ctl_id_valid_i,
@@ -363,10 +362,10 @@ module id(
 
     assign rj_hazard = ~inst_no_rj 
                     & ~rj_zero
-                    & ((~forward_ex2id_valid_i & ex_rj_same) | (~forward_mem2id_valid_i & mem_rj_same) /*| wb_rj_same*/);
+                    & ((~forward_ex2id_valid_i & ex_rj_same) /*| mem2_rj_same | wb_rj_same*/);
     assign rk_hazard = ~inst_no_rk 
                     & ~rk_zero
-                    & ((~forward_ex2id_valid_i & ex_rk_same) | (~forward_mem2id_valid_i & mem_rk_same) /*| wb_rk_same*/);
+                    & ((~forward_ex2id_valid_i & ex_rk_same) /*| mem2_rk_same | wb_rk_same*/);
     
     // ID 级有效 & rj 无数据冒险 & rk 无数据冒险 & （不是跳转指令 | (是跳转指令 & IF 已执行完毕可以取下一条)）
     // TODO: Maybe have bugs when jbr is depends on rj or rk;
@@ -375,12 +374,12 @@ module id(
     // 数据多路选择
     assign rj_data = rj_zero ? 32'd0 
                         : forward_ex2id_valid_i & ex_rj_same ? forward_ex2id_data_i
-                        : forward_mem2id_valid_i & mem_rj_same ? forward_mem2id_data_i
+                        : mem_rj_same ? forward_mem2id_data_i
                         : wb_rj_same ? forward_wb2id_data_i : rj_data_i;
 
     assign rk_data = rk_zero ? 32'd0 
                         : forward_ex2id_valid_i & ex_rk_same ? forward_ex2id_data_i
-                        : forward_mem2id_valid_i & mem_rk_same ? forward_mem2id_data_i
+                        : mem_rk_same ? forward_mem2id_data_i
                         : wb_rk_same ? forward_wb2id_data_i : rk_data_i;
 
 

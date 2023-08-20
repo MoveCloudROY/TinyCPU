@@ -2,7 +2,7 @@
 
 
 module wb(
-    input [`RegW - 1:0] mult_P_i,
+    
     output [  4:0] rf_wdest_o /* verilator public_flat */,     // 寄存器写地址
     output         rf_we_o,       // 寄存器写使能
     output [`RegW - 1:0]  rf_wdata_o /* verilator public_flat */,     // 寄存器写数据
@@ -22,11 +22,9 @@ module wb(
     /*==================================================*/
     //                 级间寄存器信号解析
     /*==================================================*/
-    wire id_multiply;
-    //MEM传来的result
-    wire [`RegW - 1:0] mem_result;
-    wire [`RegW - 1:0] wdata;
-    
+        //MEM传来的result
+    wire [31:0] mem_result;
+        
     //寄存器堆写使能和写地址
     wire [4:0] wb_wdest;
     wire wb_we;
@@ -36,7 +34,6 @@ module wb(
     //pc
     `NO_TOUCH wire [31:0] pc;    
     assign {
-        id_multiply,
         wb_wdest,
         wb_we,
         mem_result,
@@ -47,10 +44,9 @@ module wb(
     /*==================================================*/
     //                   写回信号输出
     /*==================================================*/
-    assign wdata = id_multiply ? mult_P_i : mem_result;
     assign rf_we_o   = wb_we & ctl_wb_over_o;
     assign rf_wdest_o = wb_wdest;
-    assign rf_wdata_o = wdata;
+    assign rf_wdata_o = mem_result;
 
     assign _occupy_pc_o = pc;
 
@@ -66,7 +62,7 @@ module wb(
     /*================================*/
     //              前递
     /*================================*/
-    assign forward_wb2id_data_o = wdata & {32{ctl_wb_valid_i}};
+    assign forward_wb2id_data_o = mem_result & {32{ctl_wb_valid_i}};
     
 endmodule
 

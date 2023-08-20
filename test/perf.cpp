@@ -43,7 +43,7 @@ constexpr size_t TRACE_DEEP = 5;
 #define UTEST_CRYPTONIGHT 0x000030b4
 
 
-#define UTEST_SELECT UTEST_CRYPTONIGHT
+#define UTEST_SELECT UTEST_MATRIX
 
 
 namespace {

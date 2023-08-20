@@ -3,9 +3,6 @@
 module ex(
     input  clk_i,      // 时钟
 
-    output [`RegW-1:0] mult_A_o,
-    output [`RegW-1:0] mult_B_o,
-
     input  [`ID2EXBusSize - 1:0]    id2ex_bus_ri,
     output [`EX2MEMBusSize - 1:0]   ex2mem_bus_o,
 
@@ -83,8 +80,7 @@ module ex(
     //     .product_o   (product   ),
     //     .mult_end_o  (mult_end  )
     // );
-    assign mult_A_o = id_rj;
-    assign mult_B_o = id_rk;
+    assign product =  id_rj * id_rk;
     assign mult_end = 1'b1;
 
 
@@ -98,11 +94,10 @@ module ex(
     // wire        lo_write;
     //要写入HI的值放在exe_result里，包括MULT和MTHI指令,
     //要写入LO的值放在lo_result里，包括MULT和MTLO指令,
-    assign exe_result = alu_result;
+    assign exe_result = id_multiply ? product[31:0] : alu_result;
 
     assign ex2mem_bus_o = {
-        id_multiply,
-        // MEM 需要的信号
+                // MEM 需要的信号
         id_mem_ctl, id_mem_st_data, // load/store信息和store数据
         exe_result,                 // exe运算结果
         // WB 需要的信号
