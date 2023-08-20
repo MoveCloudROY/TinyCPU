@@ -52,7 +52,7 @@ module predictor (
     assign if_predict_taken_o     = current_prediction[1];
     assign if_predict_targetPc_o  = current_targetPc;
 
-    reg stall;
+    reg stall, ifu_resp_r;
 
     wire [`BtbLen+1:2] update_index;
     assign update_index = id_update_pc_i[`BtbLen+1:2];
@@ -63,10 +63,10 @@ module predictor (
     wire prediction_pcIsFailed;
     assign prediction_pcIsFailed = update_history[1] & id_update_taken_i & ((update_targetPc ^ id_update_targetPc_i) != 0);
     wire prediction_isFailed;
-    assign prediction_isFailed = ((update_history[1] ^ id_update_taken_i) 
+    assign prediction_isFailed = (((update_history[1] ^ id_update_taken_i) 
                                     | prediction_pcIsFailed)
                                     & id_update_isJumpInst_i
-                                | (update_history[1] & ~id_update_isJumpInst_i & ~stall);
+                                | (update_history[1] & ~id_update_isJumpInst_i & ~stall)) & ifu_resp_r;
     assign if_predict_failed_o  = prediction_isFailed;
     assign if_flush_pc_o = update_history[1] & ~prediction_pcIsFailed ? 
                             id_update_pc_i + 32'd4 : id_update_targetPc_i;
@@ -79,8 +79,10 @@ module predictor (
     always @(posedge clk_i) begin
         if (rst_i) begin
             stall <= 1'b0;
+            ifu_resp_r <= 1'b1;
         end else begin
             stall <= prediction_isFailed;
+            ifu_resp_r <= ifu_resp_i;
         end
     end
     // Update the predictor based on actual outcome
